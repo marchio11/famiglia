@@ -170,10 +170,25 @@ a { color: inherit; text-decoration: none; }
   border-top: 1px solid var(--border);
 }
 .sum-row:first-of-type { border-top: 0; }
-.sum-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.sum-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; align-self: flex-start; margin-top: .55em; }
 .sum-row .txt { flex: 1; min-width: 0; }
-.sum-row .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sum-row .s { color: var(--muted); font-size: .85rem; }
+.sum-row .t {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sum-row .s {
+  color: var(--muted);
+  font-size: .85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
 .sum-more { color: var(--muted); font-size: .85rem; padding-top: 8px; }
 
 .section-label {
@@ -661,3 +676,17 @@ dialog.sheet h2:focus { outline: none; }
 .banner.column small { color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
 .banner.column .btn { align-self: flex-start; height: 44px; text-decoration: none; }
 .version { text-align: center; color: var(--muted); font-size: .75rem; margin: 24px 0 0; }
+
+.time-pick { display: flex; align-items: center; gap: 4px; }
+.time-pick select {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.time-pick b { color: var(--muted); }

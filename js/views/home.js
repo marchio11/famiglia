@@ -27,7 +27,7 @@ function upcoming() {
     items.push({
       date: t.due || '', // senza data: in cima, con l'etichetta "Priorità alta"
       title: t.title,
-      sub: `${high ? '🚩 Priorità alta · ' : ''}To-do · ${who}`,
+      sub: `${high && t.due ? '🚩 Alta · ' : ''}To-do · ${who}`,
       href: '#/todo',
       color: high ? 'var(--danger)' : 'var(--c-todo)',
     });
@@ -148,8 +148,10 @@ export default function home(root) {
       html += `
         <a class="sum-row" href="${it.href}" style="--c:${it.color}">
           <span class="dot"></span>
-          <span class="txt"><div class="t">${esc(it.title)}</div><div class="s">${esc(it.sub)}</div></span>
-          <span class="tag ${it.date ? dueClass(it.date) : 'overdue'}">${esc(it.date ? relDate(it.date) : 'Priorità alta')}</span>
+          <span class="txt">
+            <div class="t">${esc(it.title)}</div>
+            <div class="s"><span class="tag ${it.date ? dueClass(it.date) : 'overdue'}">${esc(it.date ? relDate(it.date) : '🚩 Priorità alta')}</span><span>${esc(it.sub)}</span></div>
+          </span>
         </a>`;
     }
     if (urgent.length) {
@@ -157,8 +159,10 @@ export default function home(root) {
       html += `
         <a class="sum-row" href="#/spesa" style="--c:var(--c-spesa)">
           <span class="dot"></span>
-          <span class="txt"><div class="t">${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare</div><div class="s">${esc(names)}</div></span>
-          <span class="tag urgent">Spesa</span>
+          <span class="txt">
+            <div class="t">${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare</div>
+            <div class="s"><span class="tag urgent">Spesa</span><span>${esc(names)}</span></div>
+          </span>
         </a>`;
     }
     if (items.length > SUMMARY_MAX) html += `<div class="sum-more">e altre ${items.length - SUMMARY_MAX} scadenze…</div>`;

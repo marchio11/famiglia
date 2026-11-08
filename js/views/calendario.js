@@ -42,6 +42,30 @@ function nextHour() {
 
 /* ---------- Modulo evento ---------- */
 
+/**
+ * Orario con due menu (ore e minuti) al posto dell'orologio di Android,
+ * che con i caratteri grandi non entra nello schermo.
+ */
+function timeField(name, label, value) {
+  const [h, m] = (value || '09:00').split(':');
+  const mins = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+  if (!mins.includes(m)) mins.push(m);
+  mins.sort();
+  return `
+    <div class="field">
+      <span>${label}</span>
+      <div class="time-pick">
+        <select name="${name}H" aria-label="${label}: ore">
+          ${Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map((x) => `<option ${x === h ? 'selected' : ''}>${x}</option>`).join('')}
+        </select>
+        <b>:</b>
+        <select name="${name}M" aria-label="${label}: minuti">
+          ${mins.map((x) => `<option ${x === m ? 'selected' : ''}>${x}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+}
+
 function eventForm(ev, onSaved) {
   const isNew = !ev;
   const start = nextHour();
@@ -69,8 +93,8 @@ function eventForm(ev, onSaved) {
       <label class="switch"><input type="checkbox" name="allDay" ${f.allDay ? 'checked' : ''}> Tutto il giorno (es. scadenze, compleanni)</label>
       ${dateField('date', 'Data', f.date)}
       <div class="field-row" data-times>
-        <label class="field"><span>Dalle</span><input type="time" name="startTime" value="${esc(f.startTime)}"></label>
-        <label class="field"><span>Alle</span><input type="time" name="endTime" value="${esc(f.endTime)}"></label>
+        ${timeField('startTime', 'Dalle', f.startTime)}
+        ${timeField('endTime', 'Alle', f.endTime)}
       </div>
       <label class="field" data-enddate><span>Fino al (se dura più giorni)</span><input type="date" name="endDate" value="${esc(f.endDate !== f.date ? f.endDate : '')}"></label>
       <label class="field"><span>Luogo</span><input name="location" value="${esc(f.location)}" placeholder="Facoltativo" autocomplete="off"></label>
@@ -91,7 +115,13 @@ function eventForm(ev, onSaved) {
         return false;
       }
       const cal = lockCal ? ev.cal : v.cal;
-      const data = { ...v, allDay: !!v.allDay, repeat: v.repeat || '' };
+      const data = {
+        ...v,
+        startTime: `${v.startTimeH}:${v.startTimeM}`,
+        endTime: `${v.endTimeH}:${v.endTimeM}`,
+        allDay: !!v.allDay,
+        repeat: v.repeat || '',
+      };
       toast('Salvataggio…');
       (isNew ? gcal.createEvent(cal, data) : gcal.updateEvent(ev, cal, data))
         .then(() => {
@@ -117,6 +147,20 @@ function eventForm(ev, onSaved) {
   };
   form.addEventListener('change', sync);
   sync();
+
+  // Se cambia l'inizio, la fine si sposta un'ora dopo (se non è già più tardi).
+  const minutes = (n) => Number(form.elements[`${n}H`].value) * 60 + Number(form.elements[`${n}M`].value);
+  const onStart = () => {
+    if (minutes('endTime') > minutes('startTime')) return;
+    const end = (minutes('startTime') + 60) % (24 * 60);
+    form.elements.endTimeH.value = String(Math.floor(end / 60)).padStart(2, '0');
+    const m = String(end % 60).padStart(2, '0');
+    const sel = form.elements.endTimeM;
+    if (![...sel.options].some((o) => o.value === m)) sel.add(new Option(m, m));
+    sel.value = m;
+  };
+  form.elements.startTimeH.addEventListener('change', onStart);
+  form.elements.startTimeM.addEventListener('change', onStart);
 }
 
 function confirmDelete(ev, onDone) {

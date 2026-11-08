@@ -66,6 +66,12 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   volta e si ricorda per quell'account.
 - `js/views/*.js` — una vista per sezione.
 - Testo base 18px (`html { font-size: 112.5% }`): usare sempre `rem`.
+- Niente `<input type="time">`: l'orologio nativo di Android esce dallo
+  schermo con i caratteri grandi → usare menu ore/minuti (`timeField`).
+- Prima di pubblicare, verificare che ogni modulo si carichi (un errore di
+  sintassi blocca tutta l'app), es.
+  `node -e "import('./js/views/calendario.js')"` (errori su `document`/`window`
+  sono normali fuori dal browser), e provarla con Playwright.
 
 ## Sezioni
 
