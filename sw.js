@@ -1,7 +1,7 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
 // Ricordati di aumentare VERSION a ogni modifica dei file, così i telefoni
 // scaricano la versione nuova.
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = `casa-${VERSION}`;
 
 const FILES = [
@@ -12,6 +12,9 @@ const FILES = [
   'js/app.js',
   'js/cloud.js',
   'js/gcal.js',
+  'js/google.js',
+  'js/drive.js',
+  'js/scadenze.js',
   'js/firebase-config.js',
   'js/store.js',
   'js/util.js',

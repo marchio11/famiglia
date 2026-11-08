@@ -10,16 +10,29 @@ import calendario from './views/calendario.js';
 import documenti from './views/documenti.js';
 
 const routes = { '': home, spesa, todo, liste, calendario, documenti };
-const root = document.getElementById('app');
+let root = document.getElementById('app');
 let cleanup = null;
 let routing = false;
+
+/**
+ * Sostituisce il contenitore della pagina con uno nuovo: così i "rilevatori
+ * di tocco" e lo stile della pagina precedente non restano attivi (prima
+ * tornando su una pagina alcuni tocchi venivano gestiti due volte).
+ */
+function freshRoot() {
+  const el = document.createElement('main');
+  el.id = 'app';
+  root.replaceWith(el);
+  root = el;
+  return el;
+}
 
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   const view = routes[parts[0]] || home;
   if (cleanup) cleanup();
   cleanup = null;
-  root.innerHTML = '';
+  freshRoot();
   window.scrollTo(0, 0);
   cleanup = view(root, parts.slice(1)) || null;
 }
@@ -41,6 +54,7 @@ function stopRouting() {
 
 function screen(html) {
   stopRouting();
+  freshRoot();
   root.innerHTML = `<section class="gate">${html}</section>`;
 }
 

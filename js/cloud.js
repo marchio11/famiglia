@@ -46,14 +46,17 @@ export async function login() {
 export const logout = () => signOut(auth);
 
 /**
- * Permesso per Google Calendar: chiede a Google un "gettone" di accesso
- * (valido circa un'ora) per leggere e scrivere gli eventi dell'utente.
- * Va chiamato da un tocco dell'utente, perché apre una finestra di Google.
+ * Permesso per Google Calendar e Google Drive: chiede a Google un "gettone"
+ * di accesso (valido circa un'ora). Va chiamato da un tocco dell'utente,
+ * perché apre una finestra di Google.
  */
-export async function calendarToken() {
+export async function googleToken() {
   const provider = new GoogleAuthProvider();
   provider.addScope('https://www.googleapis.com/auth/calendar.events');
   provider.addScope('https://www.googleapis.com/auth/calendar.calendarlist.readonly');
+  // Drive completo: serve per vedere anche le cartelle create a mano su Drive.
+  // L'app lavora solo dentro la cartella "Casa Marchionni".
+  provider.addScope('https://www.googleapis.com/auth/drive');
   provider.setCustomParameters({ login_hint: auth.currentUser.email });
   const result = await reauthenticateWithPopup(auth.currentUser, provider);
   const cred = GoogleAuthProvider.credentialFromResult(result);

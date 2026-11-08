@@ -11,7 +11,7 @@
 import { firebaseConfig } from './firebase-config.js';
 
 export const CLOUD = !!(firebaseConfig && firebaseConfig.apiKey);
-export const COLLECTIONS = ['spesa', 'spesaCats', 'spesaMemo', 'todo', 'lists', 'listItems'];
+export const COLLECTIONS = ['spesa', 'spesaCats', 'spesaMemo', 'todo', 'lists', 'listItems', 'config', 'scadenze', 'docInfo'];
 export const MEMBERS = ['Andrea', 'Laura', 'Claudia'];
 
 const KEY = 'cm:data:v1';
@@ -63,6 +63,9 @@ export async function loadCloud(onError) {
   cloud = await import('./cloud.js');
   return cloud;
 }
+
+/** Id del progetto Firebase (per i link alla console Google). */
+export const firebaseProject = () => firebaseConfig?.messagingSenderId || firebaseConfig?.projectId || '';
 
 /** Il modulo Firebase già caricato (o null in modalità locale). */
 export const getCloud = () => cloud;

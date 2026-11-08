@@ -57,10 +57,26 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   calendarList; eventi privati nel calendario `primary` dell'utente. Gli
   eventi (prossimi 60 giorni) sono copiati in localStorage per account
   (`cm:cal:<uid>:cache`) e usati da home e agenda anche senza token/rete.
+- `js/google.js` — permesso Google unico (token ~1 ora, chiave
+  `cm:g:<uid>:token2`) per Calendar + Drive, `request()` autenticata, errori.
+- `js/drive.js` — Google Drive API v3 (scope `drive` completo, necessario per
+  vedere le cartelle create a mano). Drive è la fonte di verità: l'app legge
+  le cartelle ogni volta (copia in localStorage `cm:drive:<uid>:…` per uso
+  offline). Id delle cartelle principali in Firestore `config/drive`.
+  Struttura: `Casa Marchionni/{Persone/{Andrea,Laura,Claudia,Altri
+  familiari/…},Veicoli,Immobili,Animali}`; sottocartelle predefinite per
+  tipo (modificabili). Eliminare = cestino di Drive (o togliere dalla cartella
+  se il file è di un altro account). Caricamento "resumable".
+- `js/scadenze.js` — scadenze in Firestore `scadenze` ({entityId, entityName,
+  kind, type, label, date, notes, eventId}) + evento tutto il giorno nel
+  calendario Famiglia (promemoria 7 giorni e 1 giorno prima). Dati veicolo
+  (immatricolazione) in `docInfo/<folderId>`.
 - `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
-  (`#/spesa`, `#/todo`, `#/liste/<id>` …).
+  (`#/spesa`, `#/todo`, `#/liste/<id>`, `#/documenti/<folderId>` …). A ogni
+  cambio pagina il contenitore `#app` viene sostituito: i listener aggiunti
+  dalle viste su `root` non sopravvivono (evita doppie finestre).
 - `js/user.js` — nome mostrato nell'app: in cloud si ricava dal nome
   dell'account Google (se è Andrea/Laura/Claudia), altrimenti si sceglie una
   volta e si ricorda per quell'account.
@@ -95,12 +111,16 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - Configurazione Google Cloud (progetto casa-marchionni): API Google
      Calendar abilitata; schermata di consenso OAuth con i 3 account come
      utenti di test (o app pubblicata): compare l'avviso "app non verificata".
-5. **Documenti**
-   - Sezioni individuali: Andrea, Laura, Claudia, con sottocartelle
-     (documenti, esami medici, ecc.).
-   - Sezione veicoli: Toyota Yaris, Hyundai i10, Camper.
-   - Sezione immobili: una sottocartella per ogni immobile.
-   - Gestione scadenze.
+5. **Documenti** (tutti vedono tutto)
+   - Persone: Andrea, Laura, Claudia + "Altri familiari" (es. nonni, per
+     successioni), ognuno con sottocartelle (documenti, esami medici…).
+   - Veicoli: Toyota Yaris, Hyundai i10, Camper (+ nuovi dall'app).
+   - Immobili: una cartella per ogni immobile.
+   - Animali: Tokyo (il cane).
+   - Gestione scadenze per ogni elemento, con "Rinnovata" che propone la
+     prossima data; in home compaiono 30 giorni prima.
+   - Configurazione: cartella "Casa Marchionni" creata dall'account di
+     famiglia e condivisa come Editor; API Google Drive abilitata.
 6. **Schermata iniziale**
    - Parte superiore: riquadro riepilogativo con le scadenze più importanti
      (prese da to-do, calendario, lista spesa o qualunque altra lista).
@@ -138,7 +158,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   prima dell'integrazione con Google). ✅
 - **Fase 2**: Firebase + login (o alternativa). ✅
 - **Fase 3**: Calendario. ✅
-- **Fase 4**: Documenti e scadenze.
+- **Fase 4**: Documenti e scadenze. ✅
 
 ## Preferenze di lavoro
 

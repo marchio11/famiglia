@@ -168,13 +168,13 @@ export function formDialog({ title, body, submitLabel = 'Salva', color, onSubmit
 }
 
 /** Campo data con scorciatoie. */
-export function dateField(name, label, value = '') {
+export function dateField(name, label, value = '', { quick = true } = {}) {
   const next = new Date();
   const toSat = (6 - next.getDay() + 7) % 7 || 7;
   return `
     <div class="field">
       <label><span>${esc(label)}</span><input type="date" name="${name}" value="${esc(value)}"></label>
-      <div class="quick-dates">
+      <div class="quick-dates" ${quick ? '' : 'hidden'}>
         <button type="button" class="chip" data-target="${name}" data-set-date="${addDays(0)}">Oggi</button>
         <button type="button" class="chip" data-target="${name}" data-set-date="${addDays(1)}">Domani</button>
         <button type="button" class="chip" data-target="${name}" data-set-date="${addDays(toSat)}">Sabato</button>

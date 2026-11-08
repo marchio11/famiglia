@@ -11,7 +11,7 @@
 import * as store from './store.js';
 import { getAccount } from './user.js';
 import { ymd } from './util.js';
-import { firebaseConfig } from './firebase-config.js';
+import * as google from './google.js';
 
 const API = 'https://www.googleapis.com/calendar/v3';
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome';
@@ -44,66 +44,18 @@ function save(k, v) {
   } catch { /* spazio pieno o modalità privata */ }
 }
 
-/** Cancella tutto ciò che riguarda il calendario (all'uscita dall'account). */
-export function forget() {
-  try {
-    Object.keys(localStorage).filter((k) => k.startsWith('cm:cal:')).forEach((k) => localStorage.removeItem(k));
-  } catch { /* ignora */ }
-}
+export const forget = () => google.forget();
 
-/* ---------- Permesso ---------- */
+/* ---------- Permesso (condiviso con Drive, vedi google.js) ---------- */
 
-export const available = () => store.CLOUD && !!getAccount();
+export const { available, connected, connect } = google;
+export const CalError = google.GoogleError;
+google.onChange(emit);
 
-export function connected() {
-  const t = read('token');
-  return !!(t && t.exp > Date.now() + 60_000);
-}
-
-/** Chiede il permesso a Google (apre una finestra: va chiamato da un tocco). */
-export async function connect() {
-  const value = await store.getCloud().calendarToken();
-  save('token', { value, exp: Date.now() + 55 * 60_000 });
-  emit();
-}
-
-export class CalError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.code = code;
-  }
-}
-
-async function api(path, { method = 'GET', body, query } = {}) {
-  if (!connected()) throw new CalError('auth', 'Serve il permesso di Google Calendar');
-  const url = new URL(API + path);
-  for (const [k, v] of Object.entries(query || {})) if (v !== undefined) url.searchParams.set(k, v);
-  let res;
-  try {
-    res = await fetch(url, {
-      method,
-      headers: { Authorization: `Bearer ${read('token').value}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new CalError('offline', 'Nessuna connessione a internet');
-  }
-  if (res.status === 401) {
-    save('token', null);
-    emit();
-    throw new CalError('auth', 'Il permesso di Google Calendar è scaduto');
-  }
-  if (res.status === 204) return null;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const text = JSON.stringify(data);
-    const code = /accessNotConfigured|SERVICE_DISABLED/.test(text) ? 'disabled'
-      : /insufficientPermissions|ACCESS_TOKEN_SCOPE_INSUFFICIENT/.test(text) ? 'scope'
-        : res.status === 403 ? 'forbidden' : 'api';
-    throw new CalError(code, data.error?.message || `Errore ${res.status}`);
-  }
-  return data;
-}
+const api = (path, opts = {}) => {
+  const { body, ...rest } = opts;
+  return google.request(API + path, { ...rest, json: body });
+};
 
 const enc = encodeURIComponent;
 
@@ -254,7 +206,7 @@ function toGoogle(f) {
   }
   if (f.reminder === 'default') body.reminders = { useDefault: true };
   else if (f.reminder === 'none') body.reminders = { useDefault: false, overrides: [] };
-  else body.reminders = { useDefault: false, overrides: [{ method: 'popup', minutes: Number(f.reminder) }] };
+  else body.reminders = { useDefault: false, overrides: String(f.reminder).split(',').map((m) => ({ method: 'popup', minutes: Number(m) })) };
   return body;
 }
 
@@ -269,7 +221,8 @@ export async function createEvent(cal, f) {
   // Nella creazione i campi vuoti non servono.
   for (const k of ['start', 'end']) Object.keys(body[k]).forEach((x) => body[k][x] === null && delete body[k][x]);
   if (f.repeat) body.recurrence = [`RRULE:FREQ=${f.repeat}`];
-  await api(`/calendars/${enc(requireCal(cal))}/events`, { method: 'POST', body });
+  const created = await api(`/calendars/${enc(requireCal(cal))}/events`, { method: 'POST', body });
+  return created ? normalize(created, cal) : null;
 }
 
 export async function updateEvent(ev, cal, f) {
@@ -307,19 +260,6 @@ export function toForm(ev) {
 }
 
 /** Pagina della console Google per attivare l'API Calendar nel progetto giusto. */
-export function enableApiUrl(err) {
-  const num = String(err?.message || '').match(/project (\d+)/)?.[1];
-  const project = num || firebaseConfig?.projectId || '';
-  return `https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=${project}`;
-}
+export const enableApiUrl = (err) => google.enableApiUrl(err, 'calendar-json.googleapis.com');
 
-/** Messaggio comprensibile per un errore. */
-export function explain(err) {
-  if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return '';
-  if (err?.code === 'auth/popup-blocked') return 'Il telefono ha bloccato la finestra di Google: riprova';
-  if (err?.code === 'disabled') return 'Google Calendar non è ancora attivato nel progetto (vedi istruzioni di configurazione)';
-  if (err?.code === 'scope') return 'Manca il permesso per il calendario: ricollegalo e spunta tutte le caselle';
-  if (err?.code === 'offline') return 'Nessuna connessione a internet';
-  if (err?.code === 'forbidden') return 'Non hai il permesso di modificare questo calendario';
-  return err?.message || 'Qualcosa è andato storto';
-}
+export const explain = (err) => google.explain(err);

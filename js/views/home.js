@@ -1,12 +1,14 @@
 import * as store from '../store.js';
 import { esc, daysUntil, relDate, dueClass, avatar, memberColor, ymd } from '../util.js';
 import * as gcal from '../gcal.js';
+import * as scad from '../scadenze.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
 import { assigneesOf } from './todo.js';
 
 const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
 const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
+const SCAD_DAYS = 30; // le scadenze dei documenti compaiono un mese prima
 
 /** Raccoglie le scadenze da tutte le sezioni. */
 function upcoming() {
@@ -41,9 +43,23 @@ function upcoming() {
     items.push({ date: it.due, title: it.text, sub: `${list.emoji || ''} ${list.name}`, href: `#/liste/${list.id}`, color: 'var(--c-liste)' });
   }
 
+  // Scadenze dei documenti: compaiono già 30 giorni prima.
+  for (const s of scad.all()) {
+    if (daysUntil(s.date) > SCAD_DAYS) continue;
+    items.push({
+      date: s.date,
+      title: `${scad.label(s)} · ${s.entityName}`,
+      sub: '📄 Scadenza documenti',
+      href: `#/documenti/${s.entityId}`,
+      color: 'var(--c-doc)',
+    });
+  }
+
   // Eventi del calendario (Famiglia + personali di chi guarda), dall'ultima copia.
+  // Quelli creati dalle scadenze non vengono ripetuti.
+  const fromScad = scad.eventIds();
   for (const e of gcal.available() ? gcal.cached()?.events || [] : []) {
-    if (gcal.isOver(e)) continue;
+    if (gcal.isOver(e) || fromScad.has(e.id)) continue;
     const day = gcal.dayKey(e);
     if (daysUntil(day) > SUMMARY_DAYS) continue;
     const when = e.allDay ? 'tutto il giorno' : `ore ${gcal.timeOf(e.start)}`;
@@ -95,7 +111,10 @@ function tileInfo(id) {
     const next = data.events.find((e) => !gcal.isOver(e));
     return next ? `Prossimo: ${next.title} · ${relDate(gcal.dayKey(next)).toLowerCase()}` : 'Nessun impegno in vista';
   }
-  if (id === 'documenti') return 'In arrivo · personali, veicoli, immobili';
+  if (id === 'documenti') {
+    const next = scad.all().find((s) => daysUntil(s.date) >= -30);
+    return next ? `Prossima scadenza: ${scad.label(next)} · ${next.entityName} · ${relDate(next.date).toLowerCase()}` : 'Persone, veicoli, immobili, animali';
+  }
   return '';
 }
 
@@ -217,7 +236,7 @@ export default function home(root) {
 
     // Riquadri delle sezioni
     $('[data-tiles]').innerHTML = TILES.map((t) => `
-      <a class="tile ${t.wide ? 'wide' : ''} ${t.id === 'documenti' ? 'soon' : ''}" href="#/${t.id}" style="--c:${t.color}">
+      <a class="tile ${t.wide ? 'wide' : ''} " href="#/${t.id}" style="--c:${t.color}">
         <span class="badge-icon">${icon(t.icon)}</span>
         <span><div class="name">${t.name}</div><div class="info">${esc(tileInfo(t.id))}</div></span>
       </a>`).join('');

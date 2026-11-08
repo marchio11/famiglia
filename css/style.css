@@ -740,3 +740,32 @@ dialog.sheet h2:focus { outline: none; }
   font-variant-numeric: tabular-nums;
 }
 .time-pick b { color: var(--muted); }
+
+/* ---------- Documenti ---------- */
+
+.menu-list { display: grid; gap: 6px; }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-weight: 600;
+  text-align: left;
+}
+.menu-item span { font-size: 1.2rem; width: 28px; text-align: center; }
+.menu-item.danger { color: var(--danger); }
+.doc-item .row-main { cursor: pointer; }
+.doc-item > .icon { color: var(--muted); margin-right: 8px; }
+.doc-file .row-main { padding-left: 10px; }
+.doc-file .icon-btn { font-size: 1.4rem; color: var(--muted); }
+.file-ico { margin-right: 8px; }
+.empty-sec { margin: 0 4px 4px; }
+.scroll-rows { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.chip.suggest { margin: -6px 0 14px; white-space: normal; text-align: left; color: var(--c, var(--primary)); border-color: currentColor; }
+.switch.cal input { accent-color: var(--c, var(--primary)); }
+.lead .avatar { width: 34px; height: 34px; }
+.lead { font-size: 1.3rem; }
