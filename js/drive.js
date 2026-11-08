@@ -79,6 +79,8 @@ export const isSectionFolder = (id) => !!config() && Object.values(config().sect
 const q = (s) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 async function list(query, fields = FILE_FIELDS) {
+  // Con la ricerca nel testo Drive non permette di ordinare: ordina lui per pertinenza.
+  const fullText = query.includes('fullText');
   const files = [];
   let pageToken;
   do {
@@ -86,8 +88,8 @@ async function list(query, fields = FILE_FIELDS) {
       query: {
         q: query,
         fields: `nextPageToken,files(${fields})`,
-        orderBy: 'folder,name_natural',
-        pageSize: '1000',
+        orderBy: fullText ? undefined : 'folder,name_natural',
+        pageSize: fullText ? '100' : '1000',
         supportsAllDrives: 'true',
         includeItemsFromAllDrives: 'true',
         pageToken,
