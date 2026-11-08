@@ -67,7 +67,21 @@ export function allCats() {
     .filter((c) => !isBuiltin(c.id))
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
     .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji || '🏷️', custom: true }));
-  return [...builtin.filter((c) => c.id !== 'altro' && !c.hidden), ...custom, builtin.find((c) => c.id === 'altro')];
+  const base = [...builtin.filter((c) => c.id !== 'altro' && !c.hidden), ...custom, builtin.find((c) => c.id === 'altro')];
+  // Ordine scelto dalla famiglia (config/spesaOrder); le categorie non ancora
+  // ordinate mantengono la posizione di partenza, dopo quelle ordinate.
+  const order = store.get('config', 'spesaOrder')?.order || [];
+  if (!order.length) return base;
+  const key = (c, i) => {
+    const pos = order.indexOf(c.id);
+    return pos === -1 ? order.length + i : pos;
+  };
+  return base.map((c, i) => ({ c, k: key(c, i) })).sort((a, b) => a.k - b.k).map((x) => x.c);
+}
+
+/** Salva l'ordine delle categorie. */
+function saveOrder(ids) {
+  store.set('config', 'spesaOrder', { order: ids });
 }
 
 const catExists = (id) => allCats().some((c) => c.id === id);
@@ -83,7 +97,14 @@ function createCat(text) {
     store.set('spesaCats', hidden.id, { ...store.get('spesaCats', hidden.id), hidden: false, ...(emoji ? { emoji } : {}) });
     return hidden.id;
   }
-  return store.add('spesaCats', { name, emoji: emoji || '🏷️' });
+  const id = store.add('spesaCats', { name, emoji: emoji || '🏷️' });
+  // Se c'è un ordine personalizzato, la nuova categoria va prima di "Altro".
+  const order = store.get('config', 'spesaOrder')?.order;
+  if (order?.length) {
+    const at = order.indexOf('altro');
+    saveOrder(at === -1 ? [...order, id] : [...order.slice(0, at), id, ...order.slice(at)]);
+  }
+  return id;
 }
 
 function manageCats() {
@@ -92,8 +113,10 @@ function manageCats() {
     color: COLOR,
     cats: allCats().map((c) => ({ id: c.id, label: catLabel(c), locked: c.id === 'altro' })),
     placeholder: 'es. 🐶 Animali',
-    hint: 'Tocca un nome per cambiarlo, anche l\'emoji iniziale. I prodotti di una categoria eliminata finiscono in "Altro", che non si può eliminare.',
-    onSave: ({ renamed, deleted, added }) => {
+    reorder: true,
+    hint: 'Con ▲ ▼ cambi l\'ordine delle categorie nella lista (vale per tutta la famiglia). Tocca un nome per cambiarlo, anche l\'emoji iniziale. I prodotti di una categoria eliminata finiscono in "Altro", che non si può eliminare.',
+    onSave: ({ renamed, deleted, added, order }) => {
+      if (order) saveOrder(order);
       for (const r of renamed) {
         const { emoji, name } = splitEmoji(r.label);
         if (!name) continue;
@@ -107,19 +130,21 @@ function manageCats() {
         else store.remove('spesaCats', id);
       }
       added.forEach(createCat);
-      if (renamed.length || deleted.length || added.length) toast('Categorie aggiornate');
+      if (renamed.length || deleted.length || added.length || order) toast('Categorie aggiornate');
     },
   });
 
   // Ripristino delle categorie iniziali (nomi, emoji e quelle eliminate).
   const changed = store.getAll('spesaCats').filter((c) => isBuiltin(c.id));
-  if (changed.length) {
+  const ordered = !!store.get('config', 'spesaOrder')?.order?.length;
+  if (changed.length || ordered) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'link-btn restore-cats';
     btn.textContent = '↺ Ripristina le categorie iniziali';
     btn.onclick = () => {
       store.remove('spesaCats', changed.map((c) => c.id));
+      if (ordered) store.remove('config', 'spesaOrder');
       dlg.close();
       toast('Categorie iniziali ripristinate');
     };

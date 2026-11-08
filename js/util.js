@@ -220,9 +220,10 @@ export function categorySelect({ name, label = 'Categoria', options, selected = 
  * Finestra per gestire categorie: rinominare, eliminare, aggiungere.
  * cats: [{ id, label }]; onSave({ renamed: [{id, label}], deleted: [id], added: [label] })
  */
-export function categoriesDialog({ title, color, cats, hint = '', placeholder = 'Nome della categoria', onSave }) {
+export function categoriesDialog({ title, color, cats, hint = '', placeholder = 'Nome della categoria', reorder = false, onSave }) {
   const row = (c) => `
     <div class="cat-row" data-cat="${esc(c.id)}">
+      ${reorder ? `<span class="move"><button type="button" class="icon-btn" data-up aria-label="Sposta su ${esc(c.label)}">▲</button><button type="button" class="icon-btn" data-down aria-label="Sposta giù ${esc(c.label)}">▼</button></span>` : ''}
       <input name="name:${esc(c.id)}" value="${esc(c.label)}" required aria-label="Nome categoria" autocomplete="off">
       ${c.locked
         ? '<span class="icon-btn locked" title="Non si può eliminare" aria-hidden="true">🔒</span>'
@@ -250,13 +251,31 @@ export function categoriesDialog({ title, color, cats, hint = '', placeholder = 
         .map((c) => ({ id: c.id, label: v[`name:${c.id}`] }));
       const added = [...form.querySelectorAll('[data-newname]')].map((i) => i.value.trim());
       if (v.new) added.push(v.new);
-      onSave({ renamed, deleted, added: added.filter(Boolean) });
+      // Ordine scelto con le frecce (solo categorie esistenti, non eliminate).
+      const order = [...form.querySelectorAll('.cat-row[data-cat]:not(.deleted)')].map((r) => r.dataset.cat);
+      const moved = reorder && order.join('|') !== cats.map((c) => c.id).filter((id) => !deleted.includes(id)).join('|');
+      onSave({ renamed, deleted, added: added.filter(Boolean), order: moved ? order : null });
     },
   });
   const list = dlg.querySelector('[data-cats]');
   const newInput = dlg.querySelector('input[name=new]');
 
   list.addEventListener('click', (e) => {
+    const move = e.target.closest('[data-up], [data-down]');
+    if (move) {
+      const r = move.closest('.cat-row');
+      const up = move.hasAttribute('data-up');
+      const sib = up ? r.previousElementSibling : r.nextElementSibling;
+      if (sib?.dataset.cat) {
+        if (up) sib.before(r);
+        else sib.after(r);
+        r.classList.remove('moved');
+        void r.offsetWidth; // fa ripartire l'evidenziazione
+        r.classList.add('moved');
+        move.focus();
+      }
+      return;
+    }
     const del = e.target.closest('[data-del]');
     if (!del) return;
     const r = del.closest('.cat-row');

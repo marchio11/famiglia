@@ -104,10 +104,12 @@ function manageSections(listId) {
     cats: sections.map((s) => ({ id: s.id, label: s.name })),
     placeholder: typeOf(list).id === 'luoghi' ? 'es. Pizzerie' : 'es. Urgenti',
     hint: 'Le voci di una categoria eliminata restano nella lista, "senza categoria".',
-    onSave: ({ renamed, deleted, added }) => {
+    reorder: true,
+    onSave: ({ renamed, deleted, added, order }) => {
       let next = sections
         .filter((s) => !deleted.includes(s.id))
         .map((s) => ({ ...s, name: renamed.find((r) => r.id === s.id)?.label || s.name }));
+      if (order) next.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
       for (const name of added) {
         if (!next.some((s) => s.name.toLowerCase() === name.toLowerCase())) next.push({ id: store.uid(), name });
       }
