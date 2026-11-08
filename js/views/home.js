@@ -126,7 +126,7 @@ function tileInfo(id) {
     const open = store.getAll('todo').filter((t) => !t.done);
     const late = open.filter((t) => t.due && daysUntil(t.due) < 0).length;
     if (!open.length) return 'Tutto fatto! 🎉';
-    return `${open.length} da fare${late ? ` · ${late} in ritardo` : ''}`;
+    return `${open.length} attività${late ? ` · ${late} in ritardo` : ''}`;
   }
   if (id === 'liste') {
     const n = store.getAll('lists').filter((l) => !l.tripId).length;
