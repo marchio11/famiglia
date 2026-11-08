@@ -572,13 +572,18 @@ function home(root) {
 }
 
 /** Riepilogo delle prossime scadenze di tutta la famiglia. */
+const SOON_DAYS = 30; // in cima solo le scadenze vicine (e quelle già passate)
+
 function scadenzeCard() {
-  const list = scad.all();
-  if (!list.length) return '';
+  const all = scad.all();
+  if (!all.length) return '';
+  const list = all.filter((s) => daysUntil(s.date) <= SOON_DAYS);
   return `
     <section class="group">
       <h3 class="group-head"><span>⏰ Prossime scadenze</span></h3>
-      <div class="card rows scroll-rows">${list.map((s) => scadRow(s, { showEntity: true })).join('')}</div>
+      ${list.length
+        ? `<div class="card rows scroll-rows">${list.map((s) => scadRow(s, { showEntity: true })).join('')}</div>`
+        : `<p class="hint empty-sec">Nessuna scadenza nei prossimi ${SOON_DAYS} giorni ✅</p>`}
     </section>`;
 }
 

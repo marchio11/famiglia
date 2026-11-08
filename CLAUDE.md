@@ -169,6 +169,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      lì direttamente da Drive compaiono come "Altri documenti").
    - Gestione scadenze per ogni elemento, con "Rinnovata" che propone la
      prossima data; in home compaiono 30 giorni prima.
+     Anche il riquadro "Prossime scadenze" in cima ai Documenti mostra solo
+     quelle entro 30 giorni (e le scadute); le altre si vedono nell'elemento.
    - Configurazione: cartella "Casa Marchionni" creata dall'account di
      famiglia e condivisa come Editor; API Google Drive abilitata.
 6. **Viaggi** — ogni viaggio raccoglie: date, destinazione (link a Maps),
