@@ -314,8 +314,15 @@ function home(root) {
     const by = data?.bySection || {};
     let html = scadenzeCard();
     for (const s of drive.SECTIONS) {
+      if (s.key === 'altri') continue; // compare come ultima voce di Persone
       const items = by[s.key] || [];
       const canAdd = s.key !== 'persone';
+      const altri = s.key === 'persone' && cfg.sections.altri ? `
+            <a class="row doc-item" href="#/documenti/${cfg.sections.altri}">
+              <span class="lead">👴</span>
+              <div class="row-main"><div class="row-title">Altri familiari</div>${(by.altri || []).length ? `<div class="row-sub"><span>${by.altri.map((f) => esc(f.name)).join(', ')}</span></div>` : ''}</div>
+              ${icon('chevron')}
+            </a>` : '';
       html += `
         <section class="group">
           <h3 class="group-head"><span>${s.emoji} ${s.name}</span>${canAdd ? `<button class="link-btn" type="button" data-add="${s.key}">+ Aggiungi</button>` : ''}</h3>
@@ -324,7 +331,7 @@ function home(root) {
               <span class="lead">${s.key === 'persone' ? avatar(f.name) : (ITEM_ICON[s.key === 'altri' ? 'altro' : s.kind])}</span>
               <div class="row-main"><div class="row-title">${esc(f.name)}</div>${countScad(f.id)}</div>
               ${icon('chevron')}
-            </a>`).join('')}</div>`
+            </a>`).join('')}${altri}</div>`
             : `<p class="hint empty-sec">${data ? `Nessun ${ADD_LABEL[s.key] || 'elemento'} per ora.` : 'Caricamento…'}</p>`}
         </section>`;
     }
@@ -479,13 +486,17 @@ function folderView(root, id) {
 
     const folders = data.items.filter((f) => f.mimeType === drive.FOLDER);
     const files = data.items.filter((f) => f.mimeType !== drive.FOLDER);
+    const isAltri = id === drive.config()?.sections.altri;
+    if (isAltri && !folders.length) {
+      html += `<div class="empty-state"><span class="big">👴</span><p><strong>Nessun familiare per ora</strong></p><p>Crea una cartella con il nome della persona (anche da Google Drive, dentro "Persone/Altri familiari") oppure tocca <b>Aggiungi</b>.</p></div>`;
+    }
     if (folders.length) {
       html += `
         <section class="group">
-          <h3 class="group-head"><span>📁 Cartelle</span></h3>
+          <h3 class="group-head"><span>${isAltri ? '👴 Altri familiari' : '📁 Cartelle'}</span></h3>
           <div class="card rows">${folders.map((f) => `
             <a class="row doc-item" href="#/documenti/${f.id}">
-              <span class="lead">📁</span>
+              <span class="lead">${isAltri ? '👤' : '📁'}</span>
               <div class="row-main"><div class="row-title">${esc(f.name)}</div></div>
               ${icon('chevron')}
             </a>`).join('')}</div>
@@ -493,7 +504,7 @@ function folderView(root, id) {
     }
     // Al livello di una persona/veicolo/… i documenti vanno nelle sottocartelle:
     // la sezione compare solo se qualcuno ha messo dei file qui da Drive.
-    if (!entity || files.length) html += `
+    if ((!entity && !protectedFolder) || files.length) html += `
       <section class="group">
         <h3 class="group-head"><span>📄 ${entity ? 'Altri documenti' : 'Documenti'}</span></h3>
         ${files.length ? `<div class="card rows">${files.map((f) => `
@@ -554,7 +565,11 @@ function folderView(root, id) {
       const entity = entityOf(folder);
       withPermission(() => menu('Aggiungi', [
         // Persona/veicolo/…: scadenze e cartelle; dentro le sottocartelle: documenti.
-        ...(entity ? [
+        ...(id === drive.config()?.sections.altri ? [
+          { icon: '👤', label: 'Nuovo familiare', run: () => nameDialog({ title: 'Nuovo familiare', placeholder: 'es. Nonno Giuseppe', submitLabel: 'Crea', hint: 'Creo la sua cartella su Google Drive con la sottocartella "Documenti".' }, (name) => {
+            drive.createItem('altri', name).then((item) => { toast(`"${name}" creato ✓`); location.hash = `#/documenti/${item.id}`; }).catch((err) => toast(drive.explain(err)));
+          }) },
+        ] : entity ? [
           { icon: '⏰', label: 'Nuova scadenza', run: () => scadenzaForm(entity, null) },
         ] : [
           { icon: '📷', label: 'Scatta una foto', run: () => $('[data-camera]').click() },

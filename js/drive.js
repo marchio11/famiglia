@@ -29,9 +29,9 @@ const FILE_FIELDS = 'id,name,mimeType,webViewLink,modifiedTime,size,parents,owne
 export const SECTIONS = [
   { key: 'persone', name: 'Persone', folder: 'Persone', kind: 'persona', emoji: '👨‍👩‍👧' },
   { key: 'altri', name: 'Altri familiari', folder: 'Altri familiari', parent: 'persone', kind: 'persona', emoji: '👴' },
+  { key: 'animali', name: 'Animali', folder: 'Animali', kind: 'animale', emoji: '🐾' },
   { key: 'veicoli', name: 'Veicoli', folder: 'Veicoli', kind: 'veicolo', emoji: '🚗' },
   { key: 'immobili', name: 'Immobili', folder: 'Immobili', kind: 'immobile', emoji: '🏠' },
-  { key: 'animali', name: 'Animali', folder: 'Animali', kind: 'animale', emoji: '🐾' },
 ];
 
 /** Sottocartelle create in automatico per ogni nuovo elemento (poi modificabili). */

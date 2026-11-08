@@ -115,8 +115,10 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      Calendar abilitata; schermata di consenso OAuth con i 3 account come
      utenti di test (o app pubblicata): compare l'avviso "app non verificata".
 5. **Documenti** (tutti vedono tutto)
-   - Persone: Andrea, Laura, Claudia + "Altri familiari" (es. nonni, per
-     successioni), ognuno con sottocartelle (documenti, esami medici…).
+   - Ordine delle sezioni: Persone, Animali, Veicoli, Immobili.
+   - Persone: Andrea, Laura, Claudia + "Altri familiari" come ultima voce del
+     riquadro Persone (apre la cartella con i nomi, es. nonni per
+     successioni, creati anche da Drive), ognuno con sottocartelle.
    - Veicoli: Toyota Yaris, Hyundai i10, Camper (+ nuovi dall'app).
    - Immobili: una cartella per ogni immobile.
    - Animali: Tokyo (il cane).
