@@ -42,8 +42,11 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
     Firestore, scritture inviate a Firestore senza attendere (offline-first).
 - `js/cloud.js` — Firebase SDK da CDN gstatic (versione fissa 11.10.0, nessun
   build step): login Google (popup, ripiego su redirect) + Firestore con cache
-  persistente. Collezioni top-level: `spesa`, `todo`, `lists`, `listItems`,
-  `spesaMemo`.
+  persistente. Collezioni top-level: `spesa`, `spesaCats` (categorie
+  personalizzate della spesa), `spesaMemo` (categoria ricordata per prodotto),
+  `todo`, `lists` (con `type`: acquisti/luoghi/cose/altro e `sections`:
+  categorie interne `[{id, name}]`), `listItems` (con `section`, e `place`
+  per i luoghi).
 - `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
@@ -56,10 +59,18 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 
 ## Sezioni
 
-1. **Spesa** — lista condivisa, spunta, categorie.
+1. **Spesa** — lista condivisa, spunta, categorie (predefinite + personalizzate).
+   Due modi di aggiungere: veloce (categoria automatica) o con dettagli
+   (categoria, quantità, urgente già in fase di inserimento).
 2. **To-do** — assegnatario, scadenza, priorità.
-3. **Liste generiche** — ricette, pasti, ecc.
+3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
+   Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
+   Cinesi…). I luoghi hanno indirizzo con link a Google Maps.
 4. **Calendario** — Google Calendar condiviso "Famiglia".
+   - Eventi/scadenze **privati** ("Solo io"): salvati nel calendario Google
+     *personale* di chi li crea (gli altri non possono vederli). L'app mostra
+     calendario Famiglia + calendario personale dell'utente, e anche la home
+     include gli eventi privati di chi la sta guardando.
 5. **Documenti**
    - Sezioni individuali: Andrea, Laura, Claudia, con sottocartelle
      (documenti, esami medici, ecc.).

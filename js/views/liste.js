@@ -1,37 +1,79 @@
 import * as store from '../store.js';
-import { esc, byWho, toast, formDialog, pageHead, dueTag, dateField } from '../util.js';
+import {
+  esc, byWho, toast, formDialog, pageHead, dueTag, dateField, categorySelect, categoriesDialog,
+} from '../util.js';
 import { icon } from '../icons.js';
 
 const COLOR = 'var(--c-liste)';
-const EMOJIS = ['📋', '🍝', '🍽️', '🎁', '🧳', '🚐', '🏠', '🛠️', '🌱', '🎬', '📚', '💊', '🎂', '✈️', '🐾', '💡'];
-const TEMPLATES = [
-  { name: 'Ricette', emoji: '🍝' },
-  { name: 'Menu della settimana', emoji: '🍽️' },
-  { name: 'Valigia camper', emoji: '🚐' },
-  { name: 'Idee regalo', emoji: '🎁' },
-  { name: 'Lavoretti in casa', emoji: '🛠️' },
-  { name: 'Film da vedere', emoji: '🎬' },
+const EMOJIS = ['📋', '🛍️', '📍', '✅', '🍕', '🍝', '🍽️', '🎁', '🧳', '🚐', '✈️', '🏠', '🛠️', '🌱', '🎬', '📚', '💊', '🎂', '🐾', '💡'];
+
+/** Tipi di lista: le liste vengono raggruppate per tipo. */
+const TYPES = [
+  { id: 'acquisti', name: 'Acquisti', emoji: '🛍️', hint: 'Negozi, regali, cose da comprare', done: 'Comprati' },
+  { id: 'luoghi', name: 'Luoghi da visitare', emoji: '📍', hint: 'Ristoranti, gite, viaggi', done: 'Visitati' },
+  { id: 'cose', name: 'Cose da fare', emoji: '✅', hint: 'Film, libri, lavoretti', done: 'Fatte' },
+  { id: 'altro', name: 'Altre liste', emoji: '📋', hint: 'Ricette, menu, valigie', done: 'Completate' },
 ];
+const typeOf = (list) => TYPES.find((t) => t.id === list?.type) || TYPES.at(-1);
+
+const TEMPLATES = [
+  { type: 'acquisti', name: 'Ferramenta e bricolage', emoji: '🛠️' },
+  { type: 'acquisti', name: 'Regali di Natale', emoji: '🎁', sections: ['Andrea', 'Laura', 'Claudia', 'Altri'] },
+  { type: 'luoghi', name: 'Ristoranti da provare', emoji: '🍕', sections: ['Pizzerie', 'Cinesi', 'Giapponesi e sushi', 'Trattorie'] },
+  { type: 'luoghi', name: 'Gite e viaggi', emoji: '✈️' },
+  { type: 'cose', name: 'Film e serie da vedere', emoji: '🎬', sections: ['Film', 'Serie TV'] },
+  { type: 'cose', name: 'Lavoretti in casa', emoji: '🏠' },
+  { type: 'altro', name: 'Ricette', emoji: '🍝', sections: ['Primi', 'Secondi', 'Dolci'] },
+  { type: 'altro', name: 'Menu della settimana', emoji: '🍽️' },
+  { type: 'altro', name: 'Valigia camper', emoji: '🚐' },
+];
+
+// Categoria in cui finiscono le voci aggiunte velocemente (per lista).
+const target = {};
+
+function createFromTemplate(t) {
+  const sections = (t.sections || []).map((name) => ({ id: store.uid(), name }));
+  return store.add('lists', { name: t.name, emoji: t.emoji, type: t.type, sections });
+}
+
+/** Aggiunge una categoria (sezione) alla lista, o riusa quella con lo stesso nome. */
+function addSection(listId, name) {
+  const list = store.get('lists', listId);
+  const sections = list.sections || [];
+  const same = sections.find((s) => s.name.toLowerCase() === name.toLowerCase());
+  if (same) return same.id;
+  const sec = { id: store.uid(), name };
+  store.update('lists', listId, { sections: [...sections, sec] });
+  return sec.id;
+}
 
 /* ---------- Finestre ---------- */
 
-function listForm(list) {
-  const l = list || { name: '', emoji: '📋' };
+function listForm(list, presetType = 'altro') {
+  const l = list || { name: '', emoji: '', type: presetType };
+  const type = typeOf(l).id;
   formDialog({
     title: list ? 'Modifica lista' : 'Nuova lista',
     color: COLOR,
     autofocus: !list,
     submitLabel: list ? 'Salva' : 'Crea',
     body: `
-      <label class="field"><span>Nome</span><input name="name" required value="${esc(l.name)}" placeholder="es. Ricette della nonna"></label>
+      <label class="field"><span>Nome</span><input name="name" required value="${esc(l.name)}" placeholder="es. Ristoranti da provare" autocomplete="off"></label>
+      <fieldset class="field"><legend>Che tipo di lista è?</legend>
+        <div class="type-pick">
+          ${TYPES.map((t) => `<label><input type="radio" name="type" value="${t.id}" ${t.id === type ? 'checked' : ''}><span><b>${t.emoji} ${t.id === 'altro' ? 'Altro' : t.name}</b><small>${t.hint}</small></span></label>`).join('')}
+        </div>
+      </fieldset>
       <fieldset class="field"><legend>Icona</legend>
         <div class="emoji-pick">
           ${EMOJIS.map((e) => `<label><input type="radio" name="emoji" value="${e}" ${e === l.emoji ? 'checked' : ''}><span>${e}</span></label>`).join('')}
         </div>
       </fieldset>`,
     onSubmit: (v) => {
-      if (list) store.update('lists', list.id, { name: v.name, emoji: v.emoji || '📋' });
-      else location.hash = `#/liste/${store.add('lists', { name: v.name, emoji: v.emoji || '📋' })}`;
+      const t = TYPES.find((x) => x.id === v.type) || TYPES.at(-1);
+      const data = { name: v.name, type: t.id, emoji: v.emoji || t.emoji };
+      if (list) store.update('lists', list.id, data);
+      else location.hash = `#/liste/${store.add('lists', { ...data, sections: [] })}`;
     },
     onDelete: list
       ? () => {
@@ -52,17 +94,76 @@ function listForm(list) {
   });
 }
 
-function itemForm(item) {
-  formDialog({
-    title: 'Modifica voce',
+function manageSections(listId) {
+  const list = store.get('lists', listId);
+  const sections = list.sections || [];
+  categoriesDialog({
+    title: `Categorie di "${list.name}"`,
     color: COLOR,
-    autofocus: false,
+    cats: sections.map((s) => ({ id: s.id, label: s.name })),
+    placeholder: typeOf(list).id === 'luoghi' ? 'es. Pizzerie' : 'es. Urgenti',
+    hint: 'Le voci di una categoria eliminata restano nella lista, "senza categoria".',
+    onSave: ({ renamed, deleted, added }) => {
+      let next = sections
+        .filter((s) => !deleted.includes(s.id))
+        .map((s) => ({ ...s, name: renamed.find((r) => r.id === s.id)?.label || s.name }));
+      for (const name of added) {
+        if (!next.some((s) => s.name.toLowerCase() === name.toLowerCase())) next.push({ id: store.uid(), name });
+      }
+      store.getAll('listItems')
+        .filter((i) => i.listId === listId && deleted.includes(i.section))
+        .forEach((i) => store.update('listItems', i.id, { section: '' }));
+      if (deleted.includes(target[listId])) target[listId] = '';
+      store.update('lists', listId, { sections: next });
+    },
+  });
+}
+
+function newSectionDialog(listId) {
+  formDialog({
+    title: 'Nuova categoria',
+    color: COLOR,
+    submitLabel: 'Crea',
     body: `
-      <label class="field"><span>Testo</span><input name="text" required value="${esc(item.text)}"></label>
-      ${dateField('due', 'Data o scadenza (facoltativa)', item.due)}
-      <label class="field"><span>Note</span><textarea name="notes" rows="4" placeholder="Ingredienti, link, dettagli…">${esc(item.notes)}</textarea></label>`,
-    onSubmit: (v) => store.update('listItems', item.id, { text: v.text, due: v.due, notes: v.notes }),
-    onDelete: () => {
+      <label class="field"><span>Nome</span><input name="name" required placeholder="${typeOf(store.get('lists', listId)).id === 'luoghi' ? 'es. Pizzerie' : 'es. Urgenti'}" autocomplete="off"></label>
+      <p class="hint">Le nuove voci verranno aggiunte in questa categoria (puoi cambiarla toccando le etichette sotto la barra).</p>`,
+    onSubmit: (v) => {
+      target[listId] = addSection(listId, v.name);
+    },
+  });
+}
+
+/** Finestra completa per una voce: nuova (item = null) o modifica. */
+function itemForm(listId, item, prefill = '') {
+  const list = store.get('lists', listId);
+  const isLuogo = typeOf(list).id === 'luoghi';
+  const isNew = !item;
+  const it = item || { text: prefill, section: target[listId] || '', due: '', notes: '', place: '' };
+  const sections = list.sections || [];
+  formDialog({
+    title: isNew ? 'Nuova voce' : 'Modifica voce',
+    color: COLOR,
+    autofocus: isNew,
+    submitLabel: isNew ? 'Aggiungi' : 'Salva',
+    body: `
+      <label class="field"><span>${isLuogo ? 'Nome del posto' : 'Testo'}</span><input name="text" required value="${esc(it.text)}" autocomplete="off"></label>
+      ${categorySelect({
+        name: 'section',
+        options: [{ value: '', label: 'Senza categoria' }, ...sections.map((s) => ({ value: s.id, label: s.name }))],
+        selected: sections.some((s) => s.id === it.section) ? it.section : '',
+        placeholder: isLuogo ? 'es. Pizzerie' : 'es. Urgenti',
+      })}
+      ${isLuogo ? `<label class="field"><span>Indirizzo o città</span><input name="place" value="${esc(it.place)}" placeholder="es. Via Roma 1, Bologna" autocomplete="off"></label>` : ''}
+      ${dateField('due', 'Data o scadenza (facoltativa)', it.due)}
+      <label class="field"><span>Note</span><textarea name="notes" rows="3" placeholder="${isLuogo ? 'Consigliato da…, link, prezzi…' : 'Dettagli, link…'}">${esc(it.notes)}</textarea></label>`,
+    onSubmit: (v) => {
+      const section = v.section === '__new__' ? addSection(listId, v.sectionNew) : v.section;
+      const data = { text: v.text, section, due: v.due, notes: v.notes };
+      if (isLuogo) data.place = v.place;
+      if (isNew) store.add('listItems', { ...data, listId, done: false });
+      else store.update('listItems', item.id, data);
+    },
+    onDelete: isNew ? null : () => {
       const removed = store.remove('listItems', item.id);
       toast('Voce eliminata', { label: 'Annulla', run: () => store.restore('listItems', removed) });
     },
@@ -70,6 +171,13 @@ function itemForm(item) {
 }
 
 /* ---------- Elenco delle liste ---------- */
+
+function templateChips(lists) {
+  const existing = new Set(lists.map((l) => l.name.toLowerCase()));
+  return TEMPLATES
+    .map((t, i) => (existing.has(t.name.toLowerCase()) ? '' : `<button class="chip" type="button" data-template="${i}">${t.emoji} ${t.name}</button>`))
+    .join('');
+}
 
 function index(root) {
   root.innerHTML = `
@@ -81,10 +189,10 @@ function index(root) {
   const el = root.querySelector('[data-lists]');
 
   el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-template]');
-    if (!b) return;
-    const t = TEMPLATES[b.dataset.template];
-    location.hash = `#/liste/${store.add('lists', { name: t.name, emoji: t.emoji })}`;
+    const tpl = e.target.closest('[data-template]');
+    if (tpl) location.hash = `#/liste/${createFromTemplate(TEMPLATES[tpl.dataset.template])}`;
+    const add = e.target.closest('[data-new-type]');
+    if (add) listForm(null, add.dataset.newType);
   });
 
   const draw = () => {
@@ -95,24 +203,37 @@ function index(root) {
         <div class="empty-state">
           <span class="big">📋</span>
           <p><strong>Nessuna lista, per ora</strong></p>
-          <p>Crea liste per tutto ciò che vi serve. Qualche idea per iniziare:</p>
-          <div class="templates">
-            ${TEMPLATES.map((t, i) => `<button class="chip" type="button" data-template="${i}">${t.emoji} ${t.name}</button>`).join('')}
-          </div>
+          <p>Liste di acquisti, ristoranti da provare, film da vedere… Qualche idea per iniziare:</p>
+          <div class="templates">${templateChips(lists)}</div>
         </div>`;
       return;
     }
-    el.innerHTML = `<div class="list-cards">${lists.map((l) => {
-      const its = items.filter((i) => i.listId === l.id);
-      const open = its.filter((i) => !i.done).length;
-      const info = its.length ? `${open} da fare · ${its.length} in tutto` : 'Vuota';
-      return `
-        <a class="card list-card" href="#/liste/${l.id}">
-          <span class="emoji">${esc(l.emoji || '📋')}</span>
-          <span class="grow"><div class="name">${esc(l.name)}</div><div class="info">${info}</div></span>
-          ${icon('chevron')}
-        </a>`;
-    }).join('')}</div>`;
+    let html = '';
+    for (const t of TYPES) {
+      const group = lists.filter((l) => typeOf(l).id === t.id);
+      if (!group.length) continue;
+      html += `
+        <section class="group">
+          <h3 class="group-head"><span>${t.emoji} ${t.name}</span><button class="link-btn" type="button" data-new-type="${t.id}">+ Nuova</button></h3>
+          <div class="list-cards">${group.map((l) => {
+            const its = items.filter((i) => i.listId === l.id);
+            const open = its.filter((i) => !i.done).length;
+            const nSec = (l.sections || []).length;
+            const info = its.length ? `${open} da fare · ${its.length} in tutto` : 'Vuota';
+            return `
+              <a class="card list-card" href="#/liste/${l.id}">
+                <span class="emoji">${esc(l.emoji || t.emoji)}</span>
+                <span class="grow"><div class="name">${esc(l.name)}</div><div class="info">${info}${nSec ? ` · ${nSec} categorie` : ''}</div></span>
+                ${icon('chevron')}
+              </a>`;
+          }).join('')}</div>
+        </section>`;
+    }
+    const chips = templateChips(lists);
+    if (chips) {
+      html += `<details class="ideas"><summary>💡 Idee per nuove liste</summary><div class="templates">${chips}</div></details>`;
+    }
+    el.innerHTML = html;
   };
 
   draw();
@@ -122,7 +243,10 @@ function index(root) {
 /* ---------- Dettaglio di una lista ---------- */
 
 function row(it) {
-  const sub = [it.done ? '' : dueTag(it.due), it.notes ? '📝 Note' : '', byWho(it.createdBy)].filter(Boolean).join('');
+  const maps = it.place
+    ? `<a class="maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${it.text} ${it.place}`)}" target="_blank" rel="noopener">${icon('pin', 'sm')}${esc(it.place)}</a>`
+    : '';
+  const sub = [it.done ? '' : dueTag(it.due), maps, it.notes ? '<span>📝 Note</span>' : '', byWho(it.createdBy)].filter(Boolean).join('');
   return `
     <div class="row ${it.done ? 'done' : ''}" data-id="${it.id}">
       <button class="check" type="button" data-act="toggle" aria-label="${it.done ? 'Togli la spunta' : 'Spunta'}: ${esc(it.text)}"></button>
@@ -134,39 +258,59 @@ function row(it) {
 }
 
 function detail(root, id) {
-  const list = store.get('lists', id);
-  if (!list) {
+  if (!store.get('lists', id)) {
     location.replace('#/liste');
     return null;
   }
 
   root.innerHTML = `
     ${pageHead({
-      title: `<span data-title></span>`,
+      title: '<span data-title></span>',
       count: ' ',
       back: '#/liste',
-      actions: `<button class="icon-btn" type="button" data-edit-list aria-label="Modifica lista">${icon('edit')}</button>`,
+      actions: `
+        <button class="icon-btn" type="button" data-sections aria-label="Gestisci categorie">${icon('tag')}</button>
+        <button class="icon-btn" type="button" data-edit-list aria-label="Modifica lista">${icon('edit')}</button>`,
     })}
     <form class="quick-add" data-add>
       <input name="text" placeholder="Aggiungi una voce…" autocomplete="off" enterkeyhint="done" aria-label="Nuova voce">
-      <button class="icon-btn" type="submit" aria-label="Aggiungi">${icon('plus')}</button>
+      <button class="icon-btn secondary" type="button" data-detailed aria-label="Aggiungi con dettagli">${icon('sliders')}</button>
+      <button class="icon-btn" type="submit" aria-label="Aggiungi veloce">${icon('plus')}</button>
     </form>
+    <div class="target" data-target></div>
     <div data-items></div>`;
 
   const form = root.querySelector('[data-add]');
   const el = root.querySelector('[data-items]');
   root.querySelector('[data-edit-list]').onclick = () => listForm(store.get('lists', id));
+  root.querySelector('[data-sections]').onclick = () => manageSections(id);
+  root.querySelector('[data-detailed]').onclick = () => {
+    const prefill = form.elements.text.value.trim();
+    form.elements.text.value = '';
+    itemForm(id, null, prefill);
+  };
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = form.elements.text.value.trim();
     if (!text) return;
-    store.add('listItems', { listId: id, text, done: false, due: '', notes: '' });
+    store.add('listItems', { listId: id, text, section: target[id] || '', done: false, due: '', notes: '' });
     form.elements.text.value = '';
     form.elements.text.focus();
   });
 
+  root.querySelector('[data-target]').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sec]');
+    if (!b) return;
+    if (b.dataset.sec === '__new__') newSectionDialog(id);
+    else {
+      target[id] = b.dataset.sec;
+      draw();
+    }
+  });
+
   el.addEventListener('click', (e) => {
+    if (e.target.closest('a')) return; // link a Google Maps
     if (e.target.closest('[data-clear]')) {
       const done = store.getAll('listItems').filter((i) => i.listId === id && i.done);
       const removed = store.remove('listItems', done.map((i) => i.id));
@@ -179,34 +323,60 @@ function detail(root, id) {
     const it = store.get('listItems', rowEl.dataset.id);
     if (!it) return;
     if (act.dataset.act === 'toggle') store.update('listItems', it.id, { done: !it.done, doneAt: Date.now() });
-    if (act.dataset.act === 'edit') itemForm(it);
+    if (act.dataset.act === 'edit') itemForm(id, it);
   });
 
-  const draw = () => {
+  function draw() {
     const l = store.get('lists', id);
     if (!l) return; // eliminata: il cambio pagina è già in corso
-    root.querySelector('[data-title]').textContent = `${l.emoji || '📋'} ${l.name}`;
+    const t = typeOf(l);
+    const sections = l.sections || [];
+    if (!sections.some((s) => s.id === target[id])) target[id] = '';
+
+    root.querySelector('[data-title]').textContent = `${l.emoji || t.emoji} ${l.name}`;
     const items = store.getAll('listItems').filter((i) => i.listId === id);
     const open = items.filter((i) => !i.done).sort((a, b) => a.createdAt - b.createdAt);
     const done = items.filter((i) => i.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     root.querySelector('[data-count]').textContent = open.length || '';
 
+    // Dove finiscono le voci aggiunte con "+"
+    root.querySelector('[data-target]').innerHTML = sections.length
+      ? `<span class="lbl">Aggiungi in:</span>
+         ${[{ id: '', name: 'Senza categoria' }, ...sections].map((s) => `<button class="chip" type="button" data-sec="${s.id}" aria-pressed="${(target[id] || '') === s.id}">${esc(s.name)}</button>`).join('')}
+         <button class="chip dashed" type="button" data-sec="__new__">+ Categoria</button>`
+      : `<button class="chip dashed" type="button" data-sec="__new__">+ Dividi in categorie</button>`;
+
     if (!items.length) {
-      el.innerHTML = `<div class="empty-state"><span class="big">${esc(l.emoji || '📋')}</span><p><strong>Lista vuota</strong></p><p>Scrivi qui sopra la prima voce. Toccando una voce puoi aggiungere note e una data.</p></div>`;
+      el.innerHTML = `<div class="empty-state"><span class="big">${esc(l.emoji || t.emoji)}</span><p><strong>Lista vuota</strong></p><p>Scrivi qui sopra la prima voce. Con ${icon('sliders', 'sm')} puoi aggiungere subito categoria, note e data.</p></div>`;
       return;
     }
+
     let html = '';
-    if (open.length) html += `<section class="group"><div class="card rows">${open.map(row).join('')}</div></section>`;
-    else html += `<div class="empty-state"><span class="big">✅</span><p><strong>Tutto completato!</strong></p></div>`;
+    if (!open.length) {
+      html += `<div class="empty-state"><span class="big">✅</span><p><strong>Tutto completato!</strong></p></div>`;
+    } else if (!sections.length) {
+      html += `<section class="group"><div class="card rows">${open.map(row).join('')}</div></section>`;
+    } else {
+      const known = new Set(sections.map((s) => s.id));
+      for (const s of [...sections, { id: '', name: 'Senza categoria' }]) {
+        const g = open.filter((i) => (known.has(i.section) ? i.section : '') === s.id);
+        if (!g.length) continue;
+        html += `
+          <section class="group">
+            <h3 class="group-head"><span>${esc(s.name)} · ${g.length}</span></h3>
+            <div class="card rows">${g.map(row).join('')}</div>
+          </section>`;
+      }
+    }
     if (done.length) {
       html += `
         <section class="group">
-          <h3 class="group-head"><span>Completate · ${done.length}</span><button class="link-btn" type="button" data-clear>Rimuovi</button></h3>
+          <h3 class="group-head"><span>${t.done} · ${done.length}</span><button class="link-btn" type="button" data-clear>Rimuovi</button></h3>
           <div class="card rows">${done.map(row).join('')}</div>
         </section>`;
     }
     el.innerHTML = html;
-  };
+  }
 
   draw();
   return store.subscribe(draw);

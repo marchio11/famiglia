@@ -132,6 +132,19 @@ export function formDialog({ title, body, submitLabel = 'Salva', color, onSubmit
   });
   dlg.addEventListener('close', () => dlg.remove());
 
+  // Menu categoria: "➕ Nuova categoria…" mostra il campo per il nome.
+  dlg.querySelectorAll('select[data-newcat]').forEach((sel) => {
+    const input = form.elements[`${sel.name}New`];
+    const sync = (focus) => {
+      const on = sel.value === '__new__';
+      input.closest('.field').hidden = !on;
+      input.required = on;
+      if (on && focus) input.focus();
+    };
+    sel.addEventListener('change', () => sync(true));
+    sync(false);
+  });
+
   // Pulsanti "Oggi / Domani / ..." accanto ai campi data.
   dlg.querySelectorAll('[data-set-date]').forEach((b) => {
     b.onclick = () => {
@@ -178,4 +191,87 @@ export function pageHead({ title, badge = '', count = '', back = '#/', actions =
       <h1><span class="title-text">${title}</span>${count !== '' ? `<span class="count" data-count>${count}</span>` : ''}</h1>
       ${actions}
     </header>`;
+}
+
+/* ---------- Categorie personalizzate ---------- */
+
+/** Separa un'eventuale emoji iniziale dal nome: "🐶 Animali" → {emoji, name}. */
+export function splitEmoji(text) {
+  const t = String(text || '').trim();
+  const m = t.match(/^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*)\s*(.*)$/u);
+  return m ? { emoji: m[1], name: m[2].trim() || m[1] } : { emoji: '', name: t };
+}
+
+/** Menu a tendina delle categorie con l'opzione "Nuova categoria…". */
+export function categorySelect({ name, label = 'Categoria', options, selected = '', placeholder = 'es. Pizzerie' }) {
+  return `
+    <label class="field"><span>${esc(label)}</span>
+      <select name="${name}" data-newcat>
+        ${options.map((o) => `<option value="${esc(o.value)}" ${o.value === selected ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+        <option value="__new__">➕ Nuova categoria…</option>
+      </select>
+    </label>
+    <label class="field" hidden><span>Nome della nuova categoria</span><input name="${name}New" placeholder="${esc(placeholder)}" autocomplete="off"></label>`;
+}
+
+/**
+ * Finestra per gestire categorie: rinominare, eliminare, aggiungere.
+ * cats: [{ id, label }]; onSave({ renamed: [{id, label}], deleted: [id], added: [label] })
+ */
+export function categoriesDialog({ title, color, cats, hint = '', placeholder = 'Nome della categoria', onSave }) {
+  const row = (c) => `
+    <div class="cat-row" data-cat="${esc(c.id)}">
+      <input name="name:${esc(c.id)}" value="${esc(c.label)}" required aria-label="Nome categoria" autocomplete="off">
+      <button type="button" class="icon-btn" data-del aria-label="Elimina ${esc(c.label)}">${icon('trash', 'sm')}</button>
+    </div>`;
+  const dlg = formDialog({
+    title,
+    color,
+    autofocus: false,
+    body: `
+      <div class="cat-list" data-cats>${cats.map(row).join('')}</div>
+      ${cats.length ? '' : '<p class="hint cat-none">Ancora nessuna categoria.</p>'}
+      <div class="field">
+        <span>Aggiungi una categoria</span>
+        <div class="cat-row">
+          <input name="new" placeholder="${esc(placeholder)}" autocomplete="off" enterkeyhint="done">
+          <button type="button" class="icon-btn add" data-add-new aria-label="Aggiungi">${icon('plus')}</button>
+        </div>
+      </div>
+      ${hint ? `<p class="hint">${hint}</p>` : ''}`,
+    onSubmit: (v, form) => {
+      const deleted = [...form.querySelectorAll('.cat-row.deleted')].map((r) => r.dataset.cat);
+      const renamed = cats
+        .filter((c) => !deleted.includes(c.id) && v[`name:${c.id}`] && v[`name:${c.id}`] !== c.label)
+        .map((c) => ({ id: c.id, label: v[`name:${c.id}`] }));
+      const added = [...form.querySelectorAll('[data-newname]')].map((i) => i.value.trim());
+      if (v.new) added.push(v.new);
+      onSave({ renamed, deleted, added: added.filter(Boolean) });
+    },
+  });
+  const list = dlg.querySelector('[data-cats]');
+  const newInput = dlg.querySelector('input[name=new]');
+
+  list.addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del]');
+    if (!del) return;
+    const r = del.closest('.cat-row');
+    if (r.dataset.pending) return r.remove();
+    const on = r.classList.toggle('deleted');
+    r.querySelector('input').disabled = on;
+    del.setAttribute('aria-label', on ? 'Ripristina' : 'Elimina');
+  });
+  dlg.querySelector('[data-add-new]').onclick = () => {
+    const val = newInput.value.trim();
+    if (!val) return newInput.focus();
+    list.insertAdjacentHTML('beforeend', `
+      <div class="cat-row" data-pending="1">
+        <input value="${esc(val)}" data-newname aria-label="Nuova categoria" autocomplete="off">
+        <button type="button" class="icon-btn" data-del aria-label="Rimuovi">${icon('trash', 'sm')}</button>
+      </div>`);
+    dlg.querySelector('.cat-none')?.remove();
+    newInput.value = '';
+    newInput.focus();
+  };
+  return dlg;
 }

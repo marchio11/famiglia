@@ -11,7 +11,7 @@
 import { firebaseConfig } from './firebase-config.js';
 
 export const CLOUD = !!(firebaseConfig && firebaseConfig.apiKey);
-export const COLLECTIONS = ['spesa', 'todo', 'lists', 'listItems', 'spesaMemo'];
+export const COLLECTIONS = ['spesa', 'spesaCats', 'spesaMemo', 'todo', 'lists', 'listItems'];
 export const MEMBERS = ['Andrea', 'Laura', 'Claudia'];
 
 const KEY = 'cm:data:v1';

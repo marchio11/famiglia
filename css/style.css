@@ -508,6 +508,7 @@ dialog.sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: v
   align-items: center;
   gap: 8px;
   min-height: 48px;
+  width: max-content;
   max-width: calc(100vw - 32px);
   opacity: 0;
   pointer-events: none;
@@ -546,3 +547,60 @@ dialog.sheet h2:focus { outline: none; }
 .google-btn { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border); height: 54px; padding: 0 24px; gap: 12px; }
 .gate-error { color: var(--danger); font-weight: 600; }
 .account-line { margin: -6px 0 14px; }
+
+/* ---------- Aggiunta con dettagli / categorie ---------- */
+
+.quick-add .icon-btn.secondary {
+  background: var(--surface);
+  color: var(--c, var(--primary));
+  border: 1px solid var(--border);
+}
+.cat-list { margin-bottom: 8px; }
+.cat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.cat-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  outline: none;
+}
+.cat-row input:focus { border-color: var(--c, var(--primary)); }
+.cat-row.deleted input { text-decoration: line-through; opacity: .5; }
+.cat-row.deleted [data-del] { color: var(--c, var(--primary)); }
+.cat-row .icon-btn.add { background: var(--c, var(--primary)); color: var(--primary-ink); }
+
+.target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.target .lbl { color: var(--muted); font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.target .chip { padding: 6px 12px; font-size: .85rem; }
+.chip.dashed { border-style: dashed; color: var(--muted); }
+
+.type-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.type-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.type-pick span {
+  display: block;
+  height: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--bg);
+}
+.type-pick b { display: block; }
+.type-pick small { color: var(--muted); font-size: .75rem; }
+.type-pick input:checked + span { border-color: var(--c, var(--primary)); }
+.type-pick input:focus-visible + span { outline: 2px solid var(--c, var(--primary)); }
+
+.ideas { margin-top: 24px; }
+.ideas summary { color: var(--muted); font-weight: 700; cursor: pointer; padding: 8px 4px; }
+.ideas .templates { justify-content: flex-start; }
+
+.row-sub a.maps { color: var(--c, var(--primary)); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }

@@ -1,5 +1,5 @@
 import * as store from '../store.js';
-import { esc, byWho, toast, formDialog, pageHead } from '../util.js';
+import { esc, byWho, toast, formDialog, pageHead, categorySelect, categoriesDialog, splitEmoji } from '../util.js';
 import { icon } from '../icons.js';
 
 const COLOR = 'var(--c-spesa)';
@@ -45,6 +45,52 @@ export function guessCategory(name) {
   return best;
 }
 
+/* ---------- Categorie (predefinite + personalizzate) ---------- */
+
+/** Tutte le categorie in ordine: predefinite, personalizzate, poi "Altro". */
+export function allCats() {
+  const custom = store.getAll('spesaCats')
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji || '🏷️', custom: true }));
+  return [...CATS.filter((c) => c.id !== 'altro'), ...custom, CATS.find((c) => c.id === 'altro')];
+}
+
+const catExists = (id) => allCats().some((c) => c.id === id);
+const catLabel = (c) => `${c.emoji} ${c.name}`;
+
+/** Crea una categoria personalizzata (o riusa quella con lo stesso nome). */
+function createCat(text) {
+  const { emoji, name } = splitEmoji(text);
+  const same = allCats().find((c) => c.name.toLowerCase() === name.toLowerCase());
+  if (same) return same.id;
+  return store.add('spesaCats', { name, emoji: emoji || '🏷️' });
+}
+
+function manageCats() {
+  const custom = allCats().filter((c) => c.custom);
+  categoriesDialog({
+    title: 'Categorie personalizzate',
+    color: COLOR,
+    cats: custom.map((c) => ({ id: c.id, label: catLabel(c) })),
+    placeholder: 'es. 🐶 Animali',
+    hint: 'Puoi iniziare il nome con un\'emoji. Le categorie predefinite restano sempre; i prodotti di una categoria eliminata finiscono in "Altro".',
+    onSave: ({ renamed, deleted, added }) => {
+      for (const r of renamed) {
+        const { emoji, name } = splitEmoji(r.label);
+        store.update('spesaCats', r.id, { name, emoji: emoji || '🏷️' });
+      }
+      for (const id of deleted) {
+        store.getAll('spesa').filter((i) => i.cat === id).forEach((i) => store.update('spesa', i.id, { cat: 'altro' }));
+        store.remove('spesaCats', id);
+      }
+      added.forEach(createCat);
+      if (renamed.length || deleted.length || added.length) toast('Categorie aggiornate');
+    },
+  });
+}
+
+/* ---------- Memoria dei prodotti ---------- */
+
 /** L'app ricorda la categoria scelta per ogni prodotto. */
 function memoKey(name) {
   // Diventa l'id del documento: niente "/" (non ammesso da Firestore).
@@ -54,30 +100,71 @@ function rememberCategory(name, cat) {
   store.set('spesaMemo', memoKey(name), { name: name.trim(), cat });
 }
 function categoryFor(name) {
-  return store.get('spesaMemo', memoKey(name))?.cat || guessCategory(name);
+  const saved = store.get('spesaMemo', memoKey(name))?.cat;
+  return saved && catExists(saved) ? saved : guessCategory(name);
 }
 
-function editItem(item) {
-  formDialog({
-    title: 'Modifica prodotto',
+/* ---------- Aggiunta e modifica ---------- */
+
+/** Aggiunge un prodotto (o riattiva quello già presente). Restituisce l'id. */
+function addProduct({ name, qty = '', cat, urgent = false }, { detailed = false } = {}) {
+  const same = store.getAll('spesa').find((i) => memoKey(i.name) === memoKey(name));
+  if (same && !same.done && !detailed) {
+    toast(`"${same.name}" è già in lista`);
+    return same.id;
+  }
+  if (same) {
+    store.update('spesa', same.id, detailed ? { name, qty, cat, urgent, done: false } : { done: false });
+    rememberCategory(name, detailed ? cat : same.cat);
+    return same.id;
+  }
+  const id = store.add('spesa', { name, qty, cat, urgent, done: false });
+  rememberCategory(name, cat);
+  return id;
+}
+
+/** Finestra completa: nuovo prodotto (item = null) o modifica. */
+function itemForm(item, prefill = '') {
+  const isNew = !item;
+  const it = item || { name: prefill, qty: '', cat: prefill ? categoryFor(prefill) : 'altro', urgent: false };
+  const cat = catExists(it.cat) ? it.cat : 'altro';
+  const dlg = formDialog({
+    title: isNew ? 'Aggiungi alla spesa' : 'Modifica prodotto',
     color: COLOR,
-    autofocus: false,
+    autofocus: isNew,
+    submitLabel: isNew ? 'Aggiungi' : 'Salva',
     body: `
-      <label class="field"><span>Prodotto</span><input name="name" required value="${esc(item.name)}"></label>
-      <label class="field"><span>Quantità o note</span><input name="qty" placeholder="es. 2 confezioni, quello senza lattosio…" value="${esc(item.qty)}"></label>
-      <label class="field"><span>Categoria</span>
-        <select name="cat">${CATS.map((c) => `<option value="${c.id}" ${c.id === item.cat ? 'selected' : ''}>${c.emoji} ${c.name}</option>`).join('')}</select>
-      </label>
-      <label class="switch"><input type="checkbox" name="urgent" ${item.urgent ? 'checked' : ''}> Urgente (compare nella home)</label>`,
+      <label class="field"><span>Prodotto</span><input name="name" required value="${esc(it.name)}" placeholder="es. Latte" autocomplete="off"></label>
+      <label class="field"><span>Quantità o note</span><input name="qty" placeholder="es. 2 confezioni, quello senza lattosio…" value="${esc(it.qty)}"></label>
+      ${categorySelect({ name: 'cat', options: allCats().map((c) => ({ value: c.id, label: catLabel(c) })), selected: cat, placeholder: 'es. 🐶 Animali' })}
+      <label class="switch"><input type="checkbox" name="urgent" ${it.urgent ? 'checked' : ''}> Urgente (compare nella home)</label>`,
     onSubmit: (v) => {
-      store.update('spesa', item.id, { name: v.name, qty: v.qty, cat: v.cat, urgent: !!v.urgent });
-      rememberCategory(v.name, v.cat);
+      const catId = v.cat === '__new__' ? createCat(v.catNew) : v.cat;
+      const data = { name: v.name.replace(/\s+/g, ' '), qty: v.qty, cat: catId, urgent: !!v.urgent };
+      if (isNew) {
+        addProduct(data, { detailed: true });
+      } else {
+        store.update('spesa', item.id, data);
+        rememberCategory(data.name, catId);
+      }
     },
-    onDelete: () => {
+    onDelete: isNew ? null : () => {
       const removed = store.remove('spesa', item.id);
       toast(`"${item.name}" eliminato`, { label: 'Annulla', run: () => store.restore('spesa', removed) });
     },
   });
+
+  // Nuovo prodotto: la categoria si aggiorna mentre scrivi, finché non la scegli a mano.
+  if (isNew) {
+    const form = dlg.querySelector('form');
+    const sel = form.elements.cat;
+    let touched = false;
+    sel.addEventListener('change', () => { touched = true; });
+    form.elements.name.addEventListener('input', (e) => {
+      const name = e.target.value.trim();
+      if (!touched && name) sel.value = categoryFor(name);
+    });
+  }
 }
 
 function row(item) {
@@ -95,10 +182,16 @@ function row(item) {
 export default function spesa(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ badge: icon('cart'), title: 'Spesa', count: ' ' })}
+    ${pageHead({
+      badge: icon('cart'),
+      title: 'Spesa',
+      count: ' ',
+      actions: `<button class="icon-btn" type="button" data-cats aria-label="Gestisci categorie">${icon('tag')}</button>`,
+    })}
     <form class="quick-add" data-add>
       <input name="name" list="spesa-sugg" placeholder="Cosa serve? es. latte, pane…" autocomplete="off" enterkeyhint="done" aria-label="Aggiungi prodotto">
-      <button class="icon-btn" type="submit" aria-label="Aggiungi">${icon('plus')}</button>
+      <button class="icon-btn secondary" type="button" data-detailed aria-label="Aggiungi con dettagli (categoria, urgente…)">${icon('sliders')}</button>
+      <button class="icon-btn" type="submit" aria-label="Aggiungi veloce">${icon('plus')}</button>
     </form>
     <datalist id="spesa-sugg"></datalist>
     <div data-list></div>`;
@@ -107,32 +200,43 @@ export default function spesa(root) {
   const input = form.elements.name;
   const listEl = root.querySelector('[data-list]');
 
+  root.querySelector('[data-cats]').onclick = manageCats;
+  root.querySelector('[data-detailed]').onclick = () => {
+    const prefill = input.value.trim();
+    input.value = '';
+    itemForm(null, prefill);
+  };
+
+  // Aggiunta veloce: categoria automatica, con possibilità di correggerla subito.
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = input.value.trim().replace(/\s+/g, ' ');
     if (!name) return;
-    const same = store.getAll('spesa').find((i) => memoKey(i.name) === memoKey(name));
-    if (same && !same.done) {
-      toast(`"${same.name}" è già in lista`);
-    } else if (same) {
-      store.update('spesa', same.id, { done: false });
-    } else {
-      const cat = categoryFor(name);
-      store.add('spesa', { name, cat, qty: '', urgent: false, done: false });
-      rememberCategory(name, cat);
+    const exists = store.getAll('spesa').some((i) => !i.done && memoKey(i.name) === memoKey(name));
+    const id = addProduct({ name, cat: categoryFor(name) });
+    if (!exists) {
+      const item = store.get('spesa', id);
+      const c = allCats().find((x) => x.id === item.cat) || CATS.at(-1);
+      toast(`${item.name} → ${catLabel(c)}`, { label: 'Modifica', run: () => itemForm(store.get('spesa', id)) });
     }
     input.value = '';
     input.focus();
   });
 
   listEl.addEventListener('click', (e) => {
+    if (e.target.closest('[data-clear]')) {
+      const done = store.getAll('spesa').filter((i) => i.done);
+      const removed = store.remove('spesa', done.map((i) => i.id));
+      toast(`${removed.length} prodotti tolti dal carrello`, { label: 'Annulla', run: () => store.restore('spesa', removed) });
+      return;
+    }
     const act = e.target.closest('[data-act]');
     const rowEl = e.target.closest('[data-id]');
     if (!act || !rowEl) return;
     const item = store.get('spesa', rowEl.dataset.id);
     if (!item) return;
     if (act.dataset.act === 'toggle') store.update('spesa', item.id, { done: !item.done, doneAt: Date.now() });
-    if (act.dataset.act === 'edit') editItem(item);
+    if (act.dataset.act === 'edit') itemForm(item);
   });
 
   const draw = () => {
@@ -152,18 +256,23 @@ export default function spesa(root) {
         <div class="empty-state">
           <span class="big">🛒</span>
           <p><strong>La lista della spesa è vuota</strong></p>
-          <p>Scrivi qui sopra cosa serve: l'app lo mette da sola nella categoria giusta.</p>
+          <p>Scrivi qui sopra cosa serve e premi <strong>+</strong>: l'app lo mette da sola nella categoria giusta.</p>
+          <p>Con ${icon('sliders', 'sm')} scegli tu categoria, quantità e urgenza.</p>
         </div>`;
       return;
     }
 
+    const cats = allCats();
+    const known = new Set(cats.map((c) => c.id));
     let html = '';
-    for (const cat of CATS) {
-      const items = todo.filter((i) => (i.cat || 'altro') === cat.id).sort((a, b) => (b.urgent - a.urgent) || a.name.localeCompare(b.name, 'it'));
+    for (const cat of cats) {
+      const items = todo
+        .filter((i) => (known.has(i.cat) ? i.cat : 'altro') === cat.id)
+        .sort((a, b) => (b.urgent - a.urgent) || a.name.localeCompare(b.name, 'it'));
       if (!items.length) continue;
       html += `
         <section class="group">
-          <h3 class="group-head"><span>${cat.emoji} ${cat.name}</span></h3>
+          <h3 class="group-head"><span>${esc(catLabel(cat))}</span></h3>
           <div class="card rows">${items.map(row).join('')}</div>
         </section>`;
     }
@@ -178,11 +287,6 @@ export default function spesa(root) {
         </section>`;
     }
     listEl.innerHTML = html;
-
-    listEl.querySelector('[data-clear]')?.addEventListener('click', () => {
-      const removed = store.remove('spesa', done.map((i) => i.id));
-      toast(`${removed.length} prodotti tolti dal carrello`, { label: 'Annulla', run: () => store.restore('spesa', removed) });
-    });
   };
 
   draw();
