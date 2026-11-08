@@ -922,5 +922,10 @@ dialog.viewer img { max-width: 100%; max-height: 100dvh; object-fit: contain; }
 
 /* Etichette delle date (es. "Mercoledì", "30 nov") ben leggibili nel tema scuro */
 @media (prefers-color-scheme: dark) {
-  .tag.week { background: rgba(139, 123, 255, .3); color: #ece8ff; }
+  /* Etichette uniformi: scritta quasi bianca, sfondo nel colore del tipo */
+  .tag { background: rgba(255, 255, 255, .1); color: #ece9f7; }
+  .tag.week { background: rgba(139, 123, 255, .32); color: #f1eeff; }
+  .tag.soon { background: rgba(255, 150, 40, .32); color: #fff3e6; }
+  .tag.urgent, .tag.overdue { background: rgba(255, 90, 90, .32); color: #ffeeee; }
+  .tag.priv { background: color-mix(in srgb, var(--ev, var(--primary)) 36%, transparent); color: #fff; }
 }

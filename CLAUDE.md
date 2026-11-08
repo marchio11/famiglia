@@ -43,7 +43,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   gradiente (il saluto resta bianco), intestazioni e pulsanti a gradiente;
   nella Spesa e nelle Liste (contenitore `.cat-groups`) ogni categoria ha un
   colore a rotazione (`--g`), nelle altre pagine i titoli usano il colore
-  della sezione (`--c`).
+  della sezione (`--c`). Etichette (`.tag`) nel tema scuro: scritta quasi
+  bianca su sfondo colorato per tipo (rosso urgente/scaduto/priorità alta,
+  arancione oggi-domani, lilla prossimi giorni, colore persona per i privati).
 - `js/store.js` — strato dati con API sincrona (`getAll`, `get`, `add`,
   `update`, `set`, `remove`, `restore`, `subscribe`). Due modalità:
   - **locale** se `js/firebase-config.js` è `null` (dati in `localStorage`);
@@ -128,7 +130,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    elimina); "Ripristina le categorie iniziali" toglie gli override.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente già in fase di inserimento).
-2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri Tutti/Miei/Fatti) — assegnatari (una, due o tutte e tre le persone; nessuno =
+2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
    scadenza, priorità.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
