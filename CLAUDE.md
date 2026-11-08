@@ -47,6 +47,13 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   `todo`, `lists` (con `type`: acquisti/luoghi/cose/altro e `sections`:
   categorie interne `[{id, name}]`), `listItems` (con `section`, e `place`
   per i luoghi).
+- `js/gcal.js` — Google Calendar API v3 chiamata dal browser con un token
+  OAuth ottenuto da `reauthenticateWithPopup` di Firebase (scope
+  `calendar.events` + `calendar.calendarlist.readonly`, durata ~1 ora, va
+  richiesto con un tocco). Calendario "Famiglia" trovato per nome nella
+  calendarList; eventi privati nel calendario `primary` dell'utente. Gli
+  eventi (prossimi 60 giorni) sono copiati in localStorage per account
+  (`cm:cal:<uid>:cache`) e usati da home e agenda anche senza token/rete.
 - `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
@@ -62,7 +69,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 1. **Spesa** — lista condivisa, spunta, categorie (predefinite + personalizzate).
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente già in fase di inserimento).
-2. **To-do** — assegnatario, scadenza, priorità.
+2. **To-do** — assegnatari (una, due o tutte e tre le persone; nessuno =
+   tutti; campo `assignees` array, compatibile col vecchio `assignee`),
+   scadenza, priorità.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
    Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
    Cinesi…). I luoghi hanno indirizzo con link a Google Maps.
@@ -71,6 +80,12 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      *personale* di chi li crea (gli altri non possono vederli). L'app mostra
      calendario Famiglia + calendario personale dell'utente, e anche la home
      include gli eventi privati di chi la sta guardando.
+   - Promemoria: impostati via API valgono solo per chi crea l'evento; gli
+     altri ricevono le notifiche predefinite del calendario Famiglia
+     (impostazione dell'app Google Calendar di ciascuno).
+   - Configurazione Google Cloud (progetto casa-marchionni): API Google
+     Calendar abilitata; schermata di consenso OAuth con i 3 account come
+     utenti di test (o app pubblicata): compare l'avviso "app non verificata".
 5. **Documenti**
    - Sezioni individuali: Andrea, Laura, Claudia, con sottocartelle
      (documenti, esami medici, ecc.).
@@ -104,9 +119,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 ## Piano
 
 - **Fase 1**: struttura, grafica, Spesa, To-do, Liste (funzionanti anche
-  prima dell'integrazione con Google).
-- **Fase 2**: Firebase + login (o alternativa).
-- **Fase 3**: Calendario.
+  prima dell'integrazione con Google). ✅
+- **Fase 2**: Firebase + login (o alternativa). ✅
+- **Fase 3**: Calendario. ✅
 - **Fase 4**: Documenti e scadenze.
 
 ## Preferenze di lavoro

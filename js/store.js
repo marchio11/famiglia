@@ -64,6 +64,9 @@ export async function loadCloud(onError) {
   return cloud;
 }
 
+/** Il modulo Firebase già caricato (o null in modalità locale). */
+export const getCloud = () => cloud;
+
 let stopListening = null;
 
 /** Inizia a ricevere i dati in tempo reale (dopo il login). */

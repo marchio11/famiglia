@@ -1,6 +1,7 @@
 import * as store from './store.js';
 import { pickUser, setAccount, knownName } from './user.js';
 import { esc, toast } from './util.js';
+import * as gcal from './gcal.js';
 import home from './views/home.js';
 import spesa from './views/spesa.js';
 import todo from './views/todo.js';
@@ -117,7 +118,14 @@ async function bootCloud() {
       return;
     }
     currentEmail = user.email;
-    setAccount({ uid: user.uid, email: user.email, logout: () => cloud.logout() });
+    setAccount({
+      uid: user.uid,
+      email: user.email,
+      logout: () => {
+        gcal.forget();
+        cloud.logout();
+      },
+    });
     store.connect();
     const name = knownName(user);
     if (name) store.setUser(name);

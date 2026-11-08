@@ -1,7 +1,9 @@
 import * as store from '../store.js';
-import { esc, daysUntil, relDate, dueClass, avatar } from '../util.js';
+import { esc, daysUntil, relDate, dueClass, avatar, memberColor } from '../util.js';
+import * as gcal from '../gcal.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
+import { assigneesOf } from './todo.js';
 
 const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
 const SUMMARY_MAX = 6;
@@ -14,7 +16,9 @@ function upcoming() {
   for (const t of store.getAll('todo')) {
     if (t.done || !t.due) continue;
     if (daysUntil(t.due) > SUMMARY_DAYS) continue;
-    const who = t.assignee ? (t.assignee === me ? 'tu' : t.assignee) : 'tutti';
+    const list = assigneesOf(t);
+    const names = list.map((m) => (m === me ? 'tu' : m)).sort((a, b) => (a === 'tu' ? -1 : b === 'tu' ? 1 : 0));
+    const who = !list.length || list.length === store.MEMBERS.length ? 'tutti' : names.join(' e ');
     items.push({ date: t.due, title: t.title, sub: `To-do · ${who}`, href: '#/todo', color: 'var(--c-todo)' });
   }
 
@@ -26,10 +30,26 @@ function upcoming() {
     items.push({ date: it.due, title: it.text, sub: `${list.emoji || ''} ${list.name}`, href: `#/liste/${list.id}`, color: 'var(--c-liste)' });
   }
 
-  // In Fase 3 qui arriveranno gli eventi del calendario Famiglia,
-  // in Fase 4 le scadenze dei documenti.
+  // Eventi del calendario (Famiglia + personali di chi guarda), dall'ultima copia.
+  for (const e of gcal.available() ? gcal.cached()?.events || [] : []) {
+    if (gcal.isOver(e)) continue;
+    const day = gcal.dayKey(e);
+    if (daysUntil(day) > SUMMARY_DAYS) continue;
+    const when = e.allDay ? 'tutto il giorno' : `ore ${gcal.timeOf(e.start)}`;
+    const priv = e.cal === 'privato';
+    items.push({
+      date: day,
+      title: e.title,
+      sub: `${priv ? '🔒 Solo tu' : 'Calendario'} · ${when}`,
+      href: '#/calendario',
+      color: priv ? memberColor(me) : 'var(--c-cal)',
+      order: e.allDay ? 0 : gcal.startDate(e).getTime(),
+    });
+  }
 
-  items.sort((a, b) => a.date.localeCompare(b.date));
+  // In Fase 4 qui arriveranno le scadenze dei documenti.
+
+  items.sort((a, b) => a.date.localeCompare(b.date) || (a.order || 0) - (b.order || 0));
   return items;
 }
 
@@ -57,7 +77,13 @@ function tileInfo(id) {
     if (!n) return 'Nessuna lista';
     return n === 1 ? '1 lista' : `${n} liste`;
   }
-  if (id === 'calendario') return 'In arrivo';
+  if (id === 'calendario') {
+    if (!gcal.available()) return 'Serve l\'accesso con Google';
+    const data = gcal.cached();
+    if (!data) return 'Tocca per collegarlo';
+    const next = data.events.find((e) => !gcal.isOver(e));
+    return next ? `Prossimo: ${next.title} · ${relDate(gcal.dayKey(next)).toLowerCase()}` : 'Nessun impegno in vista';
+  }
   if (id === 'documenti') return 'In arrivo · personali, veicoli, immobili';
   return '';
 }
@@ -120,12 +146,19 @@ export default function home(root) {
 
     // Riquadri delle sezioni
     $('[data-tiles]').innerHTML = TILES.map((t) => `
-      <a class="tile ${t.wide ? 'wide' : ''} ${['calendario', 'documenti'].includes(t.id) ? 'soon' : ''}" href="#/${t.id}" style="--c:${t.color}">
+      <a class="tile ${t.wide ? 'wide' : ''} ${t.id === 'documenti' ? 'soon' : ''}" href="#/${t.id}" style="--c:${t.color}">
         <span class="badge-icon">${icon(t.icon)}</span>
         <span><div class="name">${t.name}</div><div class="info">${esc(tileInfo(t.id))}</div></span>
       </a>`).join('');
   };
 
   draw();
-  return store.subscribe(draw);
+  const offStore = store.subscribe(draw);
+  const offCal = gcal.onChange(draw);
+  // Se il permesso del calendario è ancora valido, aggiorna gli eventi in silenzio.
+  if (gcal.available() && gcal.connected()) gcal.fetchEvents().catch(() => {});
+  return () => {
+    offStore();
+    offCal();
+  };
 }

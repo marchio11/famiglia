@@ -1,5 +1,5 @@
 import * as store from '../store.js';
-import { esc, byWho, toast, formDialog, pageHead, dueTag, dateField, daysUntil } from '../util.js';
+import { esc, byWho, avatar, toast, formDialog, pageHead, dueTag, dateField, daysUntil } from '../util.js';
 import { icon } from '../icons.js';
 
 const COLOR = 'var(--c-todo)';
@@ -12,8 +12,17 @@ const FILTERS = [
 
 let filter = 'open'; // ricordato finché l'app resta aperta
 
+/** Persone assegnate (lista vuota = tutti). Compatibile con il vecchio campo singolo. */
+export function assigneesOf(t) {
+  if (Array.isArray(t.assignees)) return t.assignees;
+  return t.assignee ? [t.assignee] : [];
+}
+const isForAll = (list) => !list.length || list.length === store.MEMBERS.length;
+const isMine = (t, me) => assigneesOf(t).includes(me);
+
 function openForm(item) {
-  const t = item || { title: '', assignee: '', due: '', priority: 2, notes: '' };
+  const t = item || { title: '', assignees: [], due: '', priority: 2, notes: '' };
+  const who = assigneesOf(t);
   formDialog({
     title: item ? 'Modifica attività' : 'Nuova attività',
     color: COLOR,
@@ -21,12 +30,12 @@ function openForm(item) {
     submitLabel: item ? 'Salva' : 'Aggiungi',
     body: `
       <label class="field"><span>Cosa c'è da fare?</span><input name="title" required value="${esc(t.title)}" placeholder="es. Prenotare il tagliando"></label>
-      <label class="field"><span>Chi se ne occupa?</span>
-        <select name="assignee">
-          <option value="">Tutti</option>
-          ${store.MEMBERS.map((m) => `<option ${m === t.assignee ? 'selected' : ''}>${m}</option>`).join('')}
-        </select>
-      </label>
+      <fieldset class="field"><legend>Chi se ne occupa?</legend>
+        <div class="who-pick">
+          ${store.MEMBERS.map((m) => `<label><input type="checkbox" name="who" value="${m}" ${who.includes(m) ? 'checked' : ''}><span>${avatar(m, 'xs')}${m}</span></label>`).join('')}
+        </div>
+        <p class="hint">Puoi sceglierne una, due o tre. Se non ne scegli nessuna, è per tutti.</p>
+      </fieldset>
       ${dateField('due', 'Scadenza', t.due)}
       <fieldset class="field"><legend>Priorità</legend>
         <div class="seg">
@@ -34,8 +43,10 @@ function openForm(item) {
         </div>
       </fieldset>
       <label class="field"><span>Note</span><textarea name="notes" rows="2" placeholder="Facoltative">${esc(t.notes)}</textarea></label>`,
-    onSubmit: (v) => {
-      const data = { title: v.title, assignee: v.assignee, due: v.due, priority: Number(v.priority) || 2, notes: v.notes };
+    onSubmit: (v, form) => {
+      const picked = new FormData(form).getAll('who');
+      const assignees = isForAll(picked) ? [] : picked;
+      const data = { title: v.title, assignees, assignee: '', due: v.due, priority: Number(v.priority) || 2, notes: v.notes };
       if (item) store.update('todo', item.id, data);
       else {
         store.add('todo', { ...data, done: false });
@@ -60,10 +71,10 @@ function sortOpen(a, b) {
 }
 
 function row(t) {
-  const me = store.getUser();
-  const assignee = t.assignee
-    ? byWho(t.assignee === me ? `${t.assignee}` : t.assignee)
-    : `<span class="who-mini">${icon('user', 'sm')}Tutti</span>`;
+  const list = assigneesOf(t);
+  const assignee = isForAll(list)
+    ? `<span class="who-mini">${icon('user', 'sm')}Tutti</span>`
+    : list.map((m) => byWho(m)).join('');
   const prio = t.priority === 3 ? `<span class="tag overdue">${icon('flag', 'sm')}Alta</span>` : '';
   const notes = t.notes ? `<span>📝 ${esc(t.notes.length > 40 ? t.notes.slice(0, 40) + '…' : t.notes)}</span>` : '';
   return `
@@ -120,7 +131,7 @@ export default function todo(root) {
     const open = all.filter((t) => !t.done);
     root.querySelector('[data-count]').textContent = open.length || '';
 
-    const mineCount = open.filter((t) => t.assignee === me).length;
+    const mineCount = open.filter((t) => isMine(t, me)).length;
     root.querySelector('[data-filters]').innerHTML = FILTERS.map((f) => {
       const n = f.id === 'open' ? open.length : f.id === 'mine' ? mineCount : all.length - open.length;
       return `<button class="chip" type="button" data-filter="${f.id}" aria-pressed="${filter === f.id}">${f.label}${n ? ` · ${n}` : ''}</button>`;
@@ -128,7 +139,7 @@ export default function todo(root) {
 
     let items;
     if (filter === 'done') items = all.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    else if (filter === 'mine') items = open.filter((t) => t.assignee === me).sort(sortOpen);
+    else if (filter === 'mine') items = open.filter((t) => isMine(t, me)).sort(sortOpen);
     else items = open.sort(sortOpen);
 
     if (!items.length) {

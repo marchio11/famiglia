@@ -604,3 +604,56 @@ dialog.sheet h2:focus { outline: none; }
 .ideas .templates { justify-content: flex-start; }
 
 .row-sub a.maps { color: var(--c, var(--primary)); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+
+.who-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.who-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.who-pick label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  font-weight: 600;
+}
+.who-pick input:checked + span { border-color: var(--c, var(--primary)); background: color-mix(in srgb, var(--c, var(--primary)) 14%, transparent); }
+.who-pick input:focus-visible + span { outline: 2px solid var(--c, var(--primary)); }
+.who-pick .avatar.xs { width: 24px; height: 24px; font-size: .75rem; }
+.row-sub .who-mini + .who-mini { margin-left: -4px; }
+
+/* ---------- Calendario ---------- */
+
+.row.ev { box-shadow: inset 4px 0 0 var(--ev); padding-left: 12px; }
+.ev-time {
+  width: 72px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  font-size: .85rem;
+  line-height: 1.25;
+}
+.ev-time b { font-weight: 700; }
+.ev-time small { color: var(--muted); font-size: .75rem; }
+.tag.priv { background: color-mix(in srgb, var(--ev, var(--primary)) 16%, transparent); color: var(--ev, var(--primary)); }
+.group-head.today { color: var(--c, var(--primary)); }
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: .9rem;
+}
+.banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner .icon { margin-top: 2px; color: var(--c, var(--primary)); }
+.btn.more { width: 100%; margin-top: 4px; }
+.hint.center { text-align: center; }
+.coming .btn { margin-top: 12px; }
+.row.ev.over { opacity: .55; }

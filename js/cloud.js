@@ -3,6 +3,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut,
+  reauthenticateWithPopup,
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -43,6 +44,22 @@ export async function login() {
 }
 
 export const logout = () => signOut(auth);
+
+/**
+ * Permesso per Google Calendar: chiede a Google un "gettone" di accesso
+ * (valido circa un'ora) per leggere e scrivere gli eventi dell'utente.
+ * Va chiamato da un tocco dell'utente, perché apre una finestra di Google.
+ */
+export async function calendarToken() {
+  const provider = new GoogleAuthProvider();
+  provider.addScope('https://www.googleapis.com/auth/calendar.events');
+  provider.addScope('https://www.googleapis.com/auth/calendar.calendarlist.readonly');
+  provider.setCustomParameters({ login_hint: auth.currentUser.email });
+  const result = await reauthenticateWithPopup(auth.currentUser, provider);
+  const cred = GoogleAuthProvider.credentialFromResult(result);
+  if (!cred?.accessToken) throw new Error('Nessun permesso ricevuto da Google');
+  return cred.accessToken;
+}
 
 /* ---------- Dati ---------- */
 

@@ -60,6 +60,8 @@ export function dueTag(dateStr) {
 
 const AV_COLORS = { Andrea: '#3f6fb5', Laura: '#c0577e', Claudia: '#c98a1a' };
 
+export const memberColor = (name) => AV_COLORS[name] || '#7a7168';
+
 export function avatar(name, size = '') {
   if (!name) return '';
   const color = AV_COLORS[name] || '#7a7168';

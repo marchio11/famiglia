@@ -11,6 +11,10 @@ export function setAccount(a) {
   account = a;
 }
 
+export function getAccount() {
+  return account;
+}
+
 const nameKey = (uid) => `cm:name:${uid}`;
 
 /** Nome da mostrare per un utente Google, se già noto. */
