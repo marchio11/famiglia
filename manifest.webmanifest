@@ -1,0 +1,21 @@
+{
+  "name": "Casa Marchionni",
+  "short_name": "Casa",
+  "description": "Spesa, to-do, liste, calendario e documenti di famiglia.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f3ec",
+  "theme_color": "#f7f3ec",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Spesa", "url": "./#/spesa", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "To-do", "url": "./#/todo", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

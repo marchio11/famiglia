@@ -17,6 +17,32 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 - Ognuno entra col proprio account Google personale: l'app mostra chi ha
   aggiunto cosa.
 
+### Decisioni prese
+
+- **Vincolo assoluto: solo servizi gratuiti**, utilizzabili senza carta di
+  credito e senza rischio di addebiti.
+- Pubblicazione: **GitHub Pages**.
+- Dati condivisi (Fase 2): **Firebase Firestore** sul piano gratuito **Spark**
+  (tempo reale, offline integrato) + **Firebase Authentication** con Google.
+- File dei documenti (Fase 4): **Google Drive** dell'account di famiglia
+  (Firebase Storage gratuito oggi richiede la fatturazione attiva → escluso).
+- Calendario (Fase 3): **Google Calendar API** sul calendario "Famiglia".
+- Codice: HTML/CSS/JavaScript puro (moduli ES), **nessun build step**, così
+  GitHub Pages pubblica direttamente i file del repo.
+
+### Struttura del codice
+
+- `index.html` — punto di ingresso; `manifest.webmanifest` + `sw.js` per la PWA
+  (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`.
+- `css/style.css` — grafica (tema chiaro/scuro automatico).
+- `js/store.js` — strato dati. In Fase 1 salva in `localStorage` (dati solo sul
+  telefono); in Fase 2 verrà sostituito da Firestore mantenendo la stessa API
+  (`getAll`, `get`, `add`, `update`, `set`, `remove`, `subscribe`).
+- `js/app.js` — router a hash (`#/spesa`, `#/todo`, `#/liste/<id>` …).
+- `js/views/*.js` — una vista per sezione.
+- In Fase 1 l'utente si sceglie da un elenco (Andrea/Laura/Claudia); in Fase 2
+  sarà sostituito dal login Google.
+
 ## Sezioni
 
 1. **Spesa** — lista condivisa, spunta, categorie.
