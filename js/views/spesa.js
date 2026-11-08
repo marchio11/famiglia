@@ -234,7 +234,7 @@ export default function spesa(root) {
       <button class="icon-btn" type="submit" aria-label="Aggiungi veloce">${icon('plus')}</button>
     </form>
     <datalist id="spesa-sugg"></datalist>
-    <div data-list></div>`;
+    <div class="cat-groups" data-list></div>`;
 
   const form = root.querySelector('[data-add]');
   const input = form.elements.name;

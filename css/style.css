@@ -28,25 +28,26 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  /* Tema scuro "Vivace" */
   :root {
-    --bg: #1b1916;
-    --surface: #26231f;
-    --surface-2: #322e29;
-    --text: #f1ece4;
-    --muted: #a99f94;
-    --border: #3b362f;
-    --primary: #63b59d;
-    --primary-ink: #0f241d;
-    --danger: #e56b5f;
-    --warn: #e6a23c;
-    --ok: #6cc08a;
-    --c-spesa: #6cc08a;
-    --c-todo: #7ea6e6;
-    --c-liste: #b994e0;
-    --c-cal: #ec9a72;
-    --c-doc: #c4a47f;
-    --c-viaggi: #5cc2c2;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --bg: #13121a;
+    --surface: #1d1c26;
+    --surface-2: #292836;
+    --text: #f4f2ff;
+    --muted: #a6a2bd;
+    --border: #2e2c3b;
+    --primary: #8b7bff;
+    --primary-ink: #ffffff;
+    --danger: #ff6b6b;
+    --warn: #ffb020;
+    --ok: #2fd47a;
+    --c-spesa: #2fd47a;
+    --c-todo: #4f8dff;
+    --c-liste: #b06bff;
+    --c-cal: #ff7a45;
+    --c-doc: #f2a93b;
+    --c-viaggi: #14c8c0;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35);
     color-scheme: dark;
   }
 }
@@ -861,3 +862,60 @@ dialog.viewer img { max-width: 100%; max-height: 100dvh; object-fit: contain; }
 }
 .cat-row .locked { opacity: .5; font-size: .9rem; }
 .restore-cats { display: block; margin-top: 4px; }
+
+/* =====================================================================
+   Tema "Vivace" (proposta A): riquadri pieni di colore, accenti a gradiente.
+   ===================================================================== */
+
+/* Riquadri delle sezioni nella home (in entrambi i temi) */
+.tile {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--c) 92%, #fff) 0%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--c) 32%, transparent);
+}
+.tile .badge-icon { background: rgba(255, 255, 255, .22); color: #fff; }
+.tile .info { color: rgba(255, 255, 255, .9); }
+.tile.soon { opacity: 1; }
+
+/* "In evidenza" */
+.sum-badge { background: linear-gradient(135deg, #ff7a45, #ff4f9a); color: #fff; box-shadow: 0 6px 16px rgba(255, 79, 154, .35); }
+.sum-head h2 { background: linear-gradient(90deg, #ff8a3d, #ff4f9a 50%, #8b7bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sum-thumb { background: linear-gradient(#ff7a45, #ff4f9a); }
+.sum-row .dot { box-shadow: 0 0 10px var(--c); }
+
+/* Intestazioni e pulsanti delle pagine interne */
+.page-head .badge-icon { background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 60%, #ff4f9a)); color: #fff; }
+.fab { background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, #ff4f9a)); color: #fff; box-shadow: 0 10px 26px color-mix(in srgb, var(--c) 40%, transparent); }
+.group-head span { color: var(--g, var(--c, var(--muted))); }
+.check::before { border-color: var(--g, var(--c, var(--primary))); }
+.row.done .check::before { background-color: var(--g, var(--c, var(--primary))); border-color: var(--g, var(--c, var(--primary))); }
+
+/* Spesa e liste: ogni categoria con il suo colore, a rotazione */
+.cat-groups .group:nth-of-type(6n+1) { --g: #2fd47a; }
+.cat-groups .group:nth-of-type(6n+2) { --g: #ffb020; }
+.cat-groups .group:nth-of-type(6n+3) { --g: #4f8dff; }
+.cat-groups .group:nth-of-type(6n+4) { --g: #ff6fae; }
+.cat-groups .group:nth-of-type(6n+5) { --g: #14c8c0; }
+.cat-groups .group:nth-of-type(6n+6) { --g: #b06bff; }
+.cat-groups .group .card.rows {
+  border: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--g) 16%, var(--surface)), var(--surface) 70%);
+  box-shadow: inset 4px 0 0 var(--g);
+}
+
+@media (prefers-color-scheme: dark) {
+  .home-head .who { background: #24222f; border-color: #3a3750; }
+  .summary {
+    background: radial-gradient(120% 140% at 0% 0%, #3b2a7a 0%, #241f3d 45%, #1d1c26 100%);
+    border: 1px solid #3d3566;
+    box-shadow: 0 12px 30px rgba(80, 60, 200, .25);
+  }
+  .sum-head { border-color: rgba(255, 255, 255, .1); }
+  .sum-row { border-color: rgba(255, 255, 255, .08); }
+  .sum-count:not(:empty) { background: rgba(255, 255, 255, .12); color: #fff; }
+  .section-label { color: #c9c0ff; }
+  .quick-add input { border-color: #34314a; }
+  .row { border-color: rgba(255, 255, 255, .06); }
+  .version { color: #6f6a88; }
+}

@@ -37,7 +37,13 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   il numero compare in fondo alla home ("versione N"). Il service worker
   scarica i file con `cache: 'reload'` (GitHub Pages ha max-age 10 min), l'app
   controlla aggiornamenti quando torna in primo piano e si ricarica da sola.
-- `css/style.css` — grafica (tema chiaro/scuro automatico).
+- `css/style.css` — grafica (tema chiaro/scuro automatico). Stile "Vivace"
+  (scelto dalla famiglia, che usa il tema scuro): riquadri della home pieni di
+  colore con sfumatura, "In evidenza" su sfondo viola-notte con titolo a
+  gradiente (il saluto resta bianco), intestazioni e pulsanti a gradiente;
+  nella Spesa e nelle Liste (contenitore `.cat-groups`) ogni categoria ha un
+  colore a rotazione (`--g`), nelle altre pagine i titoli usano il colore
+  della sezione (`--c`).
 - `js/store.js` — strato dati con API sincrona (`getAll`, `get`, `add`,
   `update`, `set`, `remove`, `restore`, `subscribe`). Due modalità:
   - **locale** se `js/firebase-config.js` è `null` (dati in `localStorage`);

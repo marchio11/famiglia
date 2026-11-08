@@ -298,7 +298,7 @@ function detail(root, id, day = '') {
       <button class="icon-btn" type="submit" aria-label="Aggiungi veloce">${icon('plus')}</button>
     </form>
     <div class="target" data-target></div>
-    <div data-items></div>`;
+    <div class="cat-groups" data-items></div>`;
 
   // Programma di viaggio: si aggiunge nel giorno toccato, o in quello di oggi.
   const startList = store.get('lists', id);
