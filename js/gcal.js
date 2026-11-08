@@ -135,13 +135,8 @@ export const isOver = (e) => !e.allDay && new Date(e.end || e.start) < new Date(
 
 export const timeOf = (iso) => new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
-/** Scarica gli eventi da oggi ai prossimi `days` giorni (Famiglia + personale). */
-export async function fetchEvents(days = DEFAULT_DAYS) {
-  const from = new Date();
-  from.setHours(0, 0, 0, 0);
-  const to = new Date(from);
-  to.setDate(to.getDate() + days);
-
+/** Eventi (Famiglia + personale) tra due istanti, in ordine di inizio. */
+async function fetchRange(from, to) {
   const fam = await familyId();
   const sources = [['privato', 'primary']];
   if (fam) sources.unshift(['famiglia', fam]);
@@ -165,16 +160,53 @@ export async function fetchEvents(days = DEFAULT_DAYS) {
     } while (pageToken);
     return items;
   }));
+  return { familyMissing: !fam, events: lists.flat().sort((a, b) => startDate(a) - startDate(b)) };
+}
 
-  const result = {
-    at: Date.now(),
-    days,
-    familyMissing: !fam,
-    events: lists.flat().sort((a, b) => startDate(a) - startDate(b)),
-  };
+/** Scarica gli eventi da oggi ai prossimi `days` giorni (per home e "Prossimi impegni"). */
+export async function fetchEvents(days = DEFAULT_DAYS) {
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setDate(to.getDate() + days);
+  const { familyMissing, events } = await fetchRange(from, to);
+  const result = { at: Date.now(), days, familyMissing, events };
   save('cache', result);
   emit();
   return result;
+}
+
+/* ---------- Mesi (per la griglia del calendario) ---------- */
+
+const monthKey = (y, m) => `month:${y}-${String(m + 1).padStart(2, '0')}`;
+
+/** Eventi salvati del mese (m da 0 a 11), o null se mai scaricati. */
+export const cachedMonth = (y, m) => read(monthKey(y, m));
+
+/** Scarica gli eventi di un mese (comprese le settimane a cavallo mostrate nella griglia). */
+export async function fetchMonth(y, m) {
+  const from = new Date(y, m, 1);
+  from.setDate(from.getDate() - 7);
+  const to = new Date(y, m + 1, 1);
+  to.setDate(to.getDate() + 14);
+  const { familyMissing, events } = await fetchRange(from, to);
+  const result = { at: Date.now(), familyMissing, events };
+  save(monthKey(y, m), result);
+  emit();
+  return result;
+}
+
+/** Tutti i giorni (AAAA-MM-GG) occupati da un evento, per i pallini della griglia. */
+export function daysOf(e) {
+  const first = e.allDay ? e.start : ymd(new Date(e.start));
+  const last = lastDay(e);
+  const out = [];
+  const d = localMidnight(first);
+  for (let i = 0; i < 62 && ymd(d) <= last; i += 1) {
+    out.push(ymd(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out.length ? out : [first];
 }
 
 /** Ultimi eventi scaricati (o null). */

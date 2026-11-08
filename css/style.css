@@ -775,3 +775,42 @@ dialog.sheet h2:focus { outline: none; }
 .quick-add.search input { -webkit-appearance: none; appearance: none; }
 .ocr-found { margin: 0 0 6px; font-size: 1.05rem; }
 .doc-file a.icon-btn { color: var(--muted); }
+
+/* ---------- Calendario: griglia del mese ---------- */
+
+.card.cal { padding: 8px 10px 12px; margin-bottom: 18px; }
+.cal-head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.cal-head h2 { flex: 1; margin: 0 0 0 4px; font-size: 1.2rem; }
+.cal-head .chip { padding: 4px 12px; font-size: .8rem; }
+.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.cal-week span { font-size: .75rem; font-weight: 700; color: var(--muted); padding: 6px 0; }
+.cal-week .sun { color: var(--c); }
+.cal-day {
+  border: 0;
+  background: none;
+  padding: 4px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 52px;
+  border-radius: 12px;
+  touch-action: pan-y;
+}
+.cal-day .num {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cal-day.other .num { color: var(--muted); opacity: .6; }
+.cal-day.today .num { background: var(--c); color: var(--primary-ink); }
+.cal-day.sel:not(.today) .num { box-shadow: inset 0 0 0 2px var(--c); }
+.cal-day .dots { display: flex; gap: 3px; height: 6px; }
+.cal-day .dots i { width: 6px; height: 6px; border-radius: 50%; }
+.cal-day:active .num { background: var(--surface-2); }
+[data-swipe] { touch-action: pan-y; }
+.day-list .link-btn { padding: 4px 0; }

@@ -19,10 +19,14 @@ const REMINDERS = [
 ];
 const REPEAT = [['', 'Mai'], ['DAILY', 'Ogni giorno'], ['WEEKLY', 'Ogni settimana'], ['MONTHLY', 'Ogni mese'], ['YEARLY', 'Ogni anno']];
 
-let days = gcal.DEFAULT_DAYS; // periodo mostrato (si allunga con "Mostra altro")
 
 const privColor = () => memberColor(store.getUser());
-const evColor = (e) => (e.cal === 'privato' ? privColor() : COLOR);
+/** Colore dell'evento: privato = il tuo colore; di una sola persona = il suo colore; altrimenti arancione. */
+const evColor = (e) => {
+  if (e.cal === 'privato') return privColor();
+  if (e.who?.length === 1) return memberColor(e.who[0]);
+  return COLOR;
+};
 
 function dayLabel(dateStr) {
   const n = daysUntil(dateStr);
@@ -66,11 +70,11 @@ function timeField(name, label, value) {
     </div>`;
 }
 
-function eventForm(ev, onSaved) {
+function eventForm(ev, onSaved, preset = {}) {
   const isNew = !ev;
   const start = nextHour();
   const f = ev ? gcal.toForm(ev) : {
-    title: '', cal: 'famiglia', allDay: false, date: addDays(start === '00:00' ? 1 : 0), endDate: '',
+    title: '', cal: 'famiglia', allDay: false, date: preset.date || addDays(start === '00:00' ? 1 : 0), endDate: '',
     startTime: start, endTime: `${String((Number(start.slice(0, 2)) + 1) % 24).padStart(2, '0')}:00`,
     location: '', notes: '', reminder: 'default', repeat: '',
   };
@@ -190,9 +194,9 @@ function confirmDelete(ev, onDone) {
   });
 }
 
-/* ---------- Agenda ---------- */
+/* ---------- Righe evento ---------- */
 
-function eventRow(e) {
+function eventRow(e, { showDay = false } = {}) {
   let when;
   if (e.allDay) {
     const last = gcal.lastDay(e);
@@ -207,6 +211,12 @@ function eventRow(e) {
     e.location ? `<span>📍 ${esc(e.location)}</span>` : '',
     e.recurring ? '<span>🔁</span>' : '',
   ].filter(Boolean).join('');
+  if (showDay) {
+    const day = gcal.dayKey(e);
+    const n = daysUntil(day);
+    const label = n === 0 ? 'Oggi' : n === 1 ? 'Domani' : new Date(`${day}T12:00`).toLocaleDateString('it-IT', n < 7 ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' });
+    when = `<b>${esc(label)}</b><small>${e.allDay ? 'tutto il giorno' : gcal.timeOf(e.start)}</small>`;
+  }
   return `
     <div class="row ev ${gcal.isOver(e) ? 'over' : ''}" data-ev="${esc(e.cal)}|${esc(e.id)}" style="--ev:${evColor(e)}">
       <div class="ev-time">${when}</div>
@@ -217,27 +227,50 @@ function eventRow(e) {
     </div>`;
 }
 
-function agenda(events) {
-  if (!events.length) {
-    return `<div class="empty-state"><span class="big">🌤️</span><p><strong>Nessun impegno nei prossimi ${days} giorni</strong></p><p>Tocca "Nuovo evento" per aggiungerne uno.</p></div>`;
-  }
-  const byDay = new Map();
+/* ---------- Griglia del mese ---------- */
+
+const WEEKDAYS = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+
+function monthTitle(y, m) {
+  const t = new Date(y, m, 1).toLocaleDateString('it-IT', { month: 'long', ...(y !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Griglia lunedì-domenica del mese, con i pallini degli eventi. */
+function monthGrid(y, m, events, selected) {
+  const today = ymd(new Date());
+  const first = new Date(y, m, 1);
+  const start = new Date(first);
+  start.setDate(1 - ((first.getDay() + 6) % 7)); // lunedì della prima settimana
+  const weeks = Math.ceil((((first.getDay() + 6) % 7) + new Date(y, m + 1, 0).getDate()) / 7);
+
+  // Colori per giorno (massimo 3 pallini)
+  const dots = new Map();
   for (const e of events) {
-    const k = gcal.dayKey(e);
-    if (!byDay.has(k)) byDay.set(k, []);
-    byDay.get(k).push(e);
+    for (const d of gcal.daysOf(e)) {
+      if (!dots.has(d)) dots.set(d, []);
+      const c = evColor(e);
+      if (!dots.get(d).includes(c)) dots.get(d).push(c);
+    }
   }
-  let html = '';
-  for (const [day, list] of [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    // Prima gli eventi di tutto il giorno, poi in ordine di orario.
-    list.sort((a, b) => (b.allDay - a.allDay) || (gcal.startDate(a) - gcal.startDate(b)));
-    html += `
-      <section class="group">
-        <h3 class="group-head ${daysUntil(day) === 0 ? 'today' : ''}"><span>${esc(dayLabel(day))}</span></h3>
-        <div class="card rows">${list.map(eventRow).join('')}</div>
-      </section>`;
+
+  let cells = '';
+  const d = new Date(start);
+  for (let i = 0; i < weeks * 7; i += 1) {
+    const key = ymd(d);
+    const other = d.getMonth() !== m;
+    const colors = (dots.get(key) || []).slice(0, 3);
+    cells += `
+      <button type="button" class="cal-day ${other ? 'other' : ''} ${key === today ? 'today' : ''} ${key === selected ? 'sel' : ''}" data-day="${key}"
+        aria-label="${d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}${colors.length ? ', con impegni' : ''}">
+        <span class="num">${d.getDate()}</span>
+        <span class="dots">${colors.map((c) => `<i style="background:${c}"></i>`).join('')}</span>
+      </button>`;
+    d.setDate(d.getDate() + 1);
   }
-  return html;
+  return `
+    <div class="cal-week">${WEEKDAYS.map((w, i) => `<span class="${i === 6 ? 'sun' : ''}">${w}</span>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>`;
 }
 
 /* ---------- Schermata ---------- */
@@ -251,13 +284,13 @@ export default function calendario(root) {
       actions: gcal.available() ? `<button class="icon-btn" type="button" data-refresh aria-label="Aggiorna">${icon('refresh')}</button>` : '',
     })}
     <div data-banner></div>
-    <div data-agenda></div>
+    <div data-body></div>
     ${gcal.available() ? `<button class="fab" type="button" data-new>${icon('plus')}Nuovo evento</button>` : ''}`;
 
   const $ = (s) => root.querySelector(s);
 
   if (!gcal.available()) {
-    $('[data-agenda]').innerHTML = `
+    $('[data-body]').innerHTML = `
       <section class="card coming">
         <div class="big">📅</div>
         <h2>Serve l'accesso con Google</h2>
@@ -266,9 +299,26 @@ export default function calendario(root) {
     return null;
   }
 
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
+  let selected = ymd(now);
   let loading = false;
   let error = null;
   let alive = true;
+  let lookup = new Map(); // "cal|id" -> evento, per aprire quello toccato
+
+  async function loadMonth() {
+    if (!gcal.connected()) return draw();
+    const y = year;
+    const m = month;
+    try {
+      await gcal.fetchMonth(y, m);
+    } catch (err) {
+      error = err;
+    }
+    if (alive) draw();
+  }
 
   async function load() {
     if (!gcal.connected()) return draw();
@@ -276,7 +326,7 @@ export default function calendario(root) {
     error = null;
     draw();
     try {
-      await gcal.fetchEvents(days);
+      await Promise.all([gcal.fetchEvents(), gcal.fetchMonth(year, month)]);
     } catch (err) {
       error = err;
     }
@@ -296,14 +346,25 @@ export default function calendario(root) {
     then();
   }
 
+  function changeMonth(delta) {
+    const d = new Date(year, month + delta, 1);
+    year = d.getFullYear();
+    month = d.getMonth();
+    const today = new Date();
+    selected = year === today.getFullYear() && month === today.getMonth() ? ymd(today) : ymd(d);
+    draw();
+    loadMonth();
+  }
+
   function draw() {
     if (!alive) return;
     const data = gcal.cached();
+    const monthData = gcal.cachedMonth(year, month);
     const banner = [];
 
-    if (!gcal.connected() && !data) {
+    if (!gcal.connected() && !data && !monthData) {
       $('[data-banner]').innerHTML = '';
-      $('[data-agenda]').innerHTML = `
+      $('[data-body]').innerHTML = `
         <section class="card coming">
           <div class="big">📅</div>
           <h2>Collega Google Calendar</h2>
@@ -332,22 +393,61 @@ export default function calendario(root) {
           ${error.message && error.message !== gcal.explain(error) ? `<small>Dettaglio tecnico: ${esc(error.message)}</small>` : ''}
         </div>`);
     }
-    if (data?.familyMissing) {
+    if ((data || monthData)?.familyMissing) {
       banner.push(`<div class="banner warn">👨‍👩‍👧 <span>Non trovo il calendario <b>"${gcal.FAMILY_NAME}"</b> nel tuo account Google: controlla di aver accettato l'invito di condivisione. Per ora vedi solo i tuoi eventi personali.</span></div>`);
     }
     if (loading) banner.push('<div class="banner">⏳ <span>Aggiornamento…</span></div>');
     $('[data-banner]').innerHTML = banner.join('');
 
-    if (!data) {
-      // Nessun evento ancora scaricato (es. errore al primo collegamento).
-      $('[data-agenda]').innerHTML = '';
-      return;
-    }
-    const events = data.events || [];
-    $('[data-agenda]').innerHTML = agenda(events)
-      + (data ? `<button class="btn ghost more" type="button" data-more>Mostra i mesi successivi</button>
-         <p class="hint center">Aggiornato ${new Date(data.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>` : '');
+    // Eventi del mese mostrato: dalla copia del mese, altrimenti da quella dei prossimi 60 giorni.
+    const monthEvents = monthData?.events || data?.events || [];
+    const upcoming = (data?.events || []).filter((e) => !gcal.isOver(e)).slice(0, 3);
+    lookup = new Map([...(data?.events || []), ...monthEvents].map((e) => [`${e.cal}|${e.id}`, e]));
+
+    const dayEvents = monthEvents
+      .filter((e) => gcal.daysOf(e).includes(selected))
+      .sort((a, b) => (b.allDay - a.allDay) || (gcal.startDate(a) - gcal.startDate(b)));
+
+    const isThisMonth = year === now.getFullYear() && month === now.getMonth();
+    const updated = monthData || data;
+    $('[data-body]').innerHTML = `
+      <section class="group">
+        <h3 class="group-head"><span>⏭️ Prossimi impegni</span></h3>
+        ${upcoming.length ? `<div class="card rows">${upcoming.map((e) => eventRow(e, { showDay: true })).join('')}</div>`
+          : '<p class="hint empty-sec">Nessun impegno in vista 🌤️</p>'}
+      </section>
+
+      <section class="card cal">
+        <div class="cal-head">
+          <button class="icon-btn" type="button" data-month="-1" aria-label="Mese precedente">${icon('chevronLeft')}</button>
+          <h2>${esc(monthTitle(year, month))}</h2>
+          ${isThisMonth ? '' : '<button class="chip" type="button" data-today>Oggi</button>'}
+          <button class="icon-btn" type="button" data-month="1" aria-label="Mese successivo">${icon('chevron')}</button>
+        </div>
+        <div data-swipe>${monthGrid(year, month, monthEvents, selected)}</div>
+      </section>
+
+      <section class="group day-list">
+        <h3 class="group-head ${daysUntil(selected) === 0 ? 'today' : ''}"><span>${esc(dayLabel(selected))}</span></h3>
+        ${dayEvents.length ? `<div class="card rows">${dayEvents.map((e) => eventRow(e)).join('')}</div>`
+          : `<p class="hint empty-sec">Nessun impegno. <button class="link-btn" type="button" data-new-day>+ Aggiungi un evento in questo giorno</button></p>`}
+      </section>
+      ${updated ? `<p class="hint center">Aggiornato ${new Date(updated.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>` : ''}`;
   }
+
+  // Scorrimento a destra/sinistra sulla griglia per cambiare mese.
+  let touch = null;
+  root.addEventListener('touchstart', (e) => {
+    if (!e.target.closest('[data-swipe]')) return;
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  root.addEventListener('touchend', (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch.x;
+    const dy = e.changedTouches[0].clientY - touch.y;
+    touch = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) changeMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
 
   root.addEventListener('click', (e) => {
     if (e.target.closest('[data-connect]') || e.target.closest('[data-refresh]')) {
@@ -356,19 +456,34 @@ export default function calendario(root) {
       });
       return;
     }
-    if (e.target.closest('[data-new]')) {
-      withPermission(() => eventForm(null, load));
+    const monthBtn = e.target.closest('[data-month]');
+    if (monthBtn) {
+      changeMonth(Number(monthBtn.dataset.month));
       return;
     }
-    if (e.target.closest('[data-more]')) {
-      days += gcal.DEFAULT_DAYS;
-      withPermission(load);
+    if (e.target.closest('[data-today]')) {
+      changeMonth((now.getFullYear() - year) * 12 + (now.getMonth() - month));
+      return;
+    }
+    const day = e.target.closest('[data-day]');
+    if (day) {
+      selected = day.dataset.day;
+      const [y, m] = selected.split('-').map(Number);
+      if (y !== year || m - 1 !== month) changeMonth((y - year) * 12 + (m - 1 - month));
+      else draw();
+      return;
+    }
+    if (e.target.closest('[data-new-day]')) {
+      withPermission(() => eventForm(null, load, { date: selected }));
+      return;
+    }
+    if (e.target.closest('[data-new]')) {
+      withPermission(() => eventForm(null, load, { date: selected >= ymd(new Date()) ? selected : undefined }));
       return;
     }
     const rowEl = e.target.closest('[data-ev]');
     if (rowEl) {
-      const [cal, id] = rowEl.dataset.ev.split('|');
-      const ev = gcal.cached()?.events.find((x) => x.cal === cal && x.id === id);
+      const ev = lookup.get(rowEl.dataset.ev);
       if (ev) withPermission(() => eventForm(ev, load));
     }
   });

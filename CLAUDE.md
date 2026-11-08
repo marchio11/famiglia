@@ -115,6 +115,12 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
    Cinesi…). I luoghi hanno indirizzo con link a Google Maps.
 4. **Calendario** — Google Calendar condiviso "Famiglia".
+   - Schermata: riquadro "Prossimi impegni" (3 eventi) + griglia del mese
+     (lunedì-domenica, pallini colorati: arancione Famiglia, colore della
+     persona se l'evento riguarda una sola persona, colore dell'utente per i
+     privati), scorrimento a destra/sinistra o frecce per cambiare mese,
+     tasto "Oggi"; toccando un giorno compaiono i suoi eventi. Eventi del mese
+     scaricati con `gcal.fetchMonth()` e copiati per mese in localStorage.
    - Eventi/scadenze **privati** ("Solo io"): salvati nel calendario Google
      *personale* di chi li crea (gli altri non possono vederli). L'app mostra
      calendario Famiglia + calendario personale dell'utente, e anche la home
