@@ -2,6 +2,7 @@ import * as store from '../store.js';
 import { esc, daysUntil, relDate, dueClass, avatar, memberColor, ymd } from '../util.js';
 import * as gcal from '../gcal.js';
 import * as scad from '../scadenze.js';
+import * as trips from '../viaggi.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
 import { assigneesOf } from './todo.js';
@@ -43,6 +44,35 @@ function upcoming() {
     items.push({ date: it.due, title: it.text, sub: `${list.emoji || ''} ${list.name}`, href: `#/liste/${list.id}`, color: 'var(--c-liste)' });
   }
 
+  // Viaggi (solo per chi parte): conto alla rovescia nei 30 giorni prima,
+  // durante il viaggio il programma di oggi.
+  const todayKey = ymd(new Date());
+  for (const t of trips.all()) {
+    if (!trips.concerns(t, me) || trips.status(t) === 'concluso') continue;
+    if (trips.status(t) === 'in corso') {
+      const prog = trips.programItems(t.id, todayKey).filter((i) => !i.done);
+      items.push({
+        date: todayKey,
+        title: `${t.emoji || '✈️'} Oggi: ${t.name}`,
+        sub: prog.length ? prog.slice(0, 2).map((i) => `${i.time ? `${i.time} ` : ''}${i.text}`).join(' · ') + (prog.length > 2 ? '…' : '') : 'Buon viaggio! 🎒',
+        href: `#/viaggi/${t.id}`,
+        color: 'var(--c-viaggi)',
+        tag: { cls: 'soon', text: trips.countdown(t).replace('In corso · ', '') },
+        order: -1,
+      });
+    } else if (daysUntil(t.start) <= 30) {
+      const prima = trips.listsOf(t.id).filter((l) => !l.program && l.type === 'cose');
+      const todo = store.getAll('listItems').filter((i) => !i.done && prima.some((l) => l.id === i.listId)).length;
+      items.push({
+        date: t.start,
+        title: `${t.emoji || '✈️'} ${t.name}: ${trips.countdown(t).toLowerCase()}`,
+        sub: `Viaggio${todo ? ` · ${todo} ${todo === 1 ? 'cosa' : 'cose'} da fare prima` : ''}`,
+        href: `#/viaggi/${t.id}`,
+        color: 'var(--c-viaggi)',
+      });
+    }
+  }
+
   // Scadenze dei documenti: compaiono già 30 giorni prima.
   for (const s of scad.all()) {
     if (daysUntil(s.date) > SCAD_DAYS) continue;
@@ -57,7 +87,7 @@ function upcoming() {
 
   // Eventi del calendario (Famiglia + personali di chi guarda), dall'ultima copia.
   // Quelli creati dalle scadenze non vengono ripetuti.
-  const fromScad = scad.eventIds();
+  const fromScad = new Set([...scad.eventIds(), ...trips.eventIds()]);
   for (const e of gcal.available() ? gcal.cached()?.events || [] : []) {
     if (gcal.isOver(e) || fromScad.has(e.id) || !gcal.concerns(e, me)) continue;
     const day = gcal.dayKey(e);
@@ -83,7 +113,8 @@ const TILES = [
   { id: 'todo', name: 'To-do', icon: 'todo', color: 'var(--c-todo)' },
   { id: 'liste', name: 'Liste', icon: 'list', color: 'var(--c-liste)' },
   { id: 'calendario', name: 'Calendario', icon: 'calendar', color: 'var(--c-cal)' },
-  { id: 'documenti', name: 'Documenti', icon: 'folder', color: 'var(--c-doc)', wide: true },
+  { id: 'viaggi', name: 'Viaggi', icon: 'plane', color: 'var(--c-viaggi)' },
+  { id: 'documenti', name: 'Documenti', icon: 'folder', color: 'var(--c-doc)' },
 ];
 
 function tileInfo(id) {
@@ -98,7 +129,7 @@ function tileInfo(id) {
     return `${open.length} da fare${late ? ` · ${late} in ritardo` : ''}`;
   }
   if (id === 'liste') {
-    const n = store.getAll('lists').length;
+    const n = store.getAll('lists').filter((l) => !l.tripId).length;
     if (!n) return 'Nessuna lista';
     return n === 1 ? '1 lista' : `${n} liste`;
   }
@@ -108,6 +139,11 @@ function tileInfo(id) {
     if (!data) return 'Tocca per collegarlo';
     const next = data.events.find((e) => !gcal.isOver(e));
     return next ? `Prossimo: ${next.title} · ${relDate(gcal.dayKey(next)).toLowerCase()}` : 'Nessun impegno in vista';
+  }
+  if (id === 'viaggi') {
+    const next = trips.all().find((t) => trips.status(t) !== 'concluso');
+    if (!next) return 'Nessun viaggio in programma';
+    return trips.status(next) === 'in corso' ? `In viaggio: ${next.name} 🎒` : `${next.name} · ${trips.countdown(next).toLowerCase()}`;
   }
   if (id === 'documenti') {
     const next = scad.all().find((s) => daysUntil(s.date) >= -30);

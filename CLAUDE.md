@@ -85,6 +85,17 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   anche il testo di foto e PDF, compresi quelli importati) e tiene solo i
   file dentro "Casa Marchionni" (albero delle cartelle ricostruito e tenuto
   10 minuti in memoria).
+- `js/viaggi.js` — viaggi in Firestore `viaggi` ({name, emoji, destination,
+  start, end, who, notes, eventId, folderId}). Le liste del viaggio sono
+  normali `lists` con `tripId` (escluse dalla pagina Liste); il programma è
+  una lista con `program: true` e una categoria per giorno (id = data), voci
+  con `time` facoltativo. Evento di più giorni nel calendario Famiglia con
+  `who` = chi parte; cartella Drive `Casa Marchionni/Viaggi/<anno> <nome>`
+  (id in `config/drive.sections.viaggi`).
+- `js/offline.js` — documenti salvati sul telefono (Cache Storage
+  "casa-offline", elenco in localStorage `cm:offline`): si aprono senza rete
+  (foto nel visualizzatore interno, PDF con il visualizzatore del telefono).
+  Il service worker cancella solo le cache `casa-vN`, mai "casa-offline".
 - `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
@@ -149,7 +160,14 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      prossima data; in home compaiono 30 giorni prima.
    - Configurazione: cartella "Casa Marchionni" creata dall'account di
      famiglia e condivisa come Editor; API Google Drive abilitata.
-6. **Schermata iniziale**
+6. **Viaggi** — ogni viaggio raccoglie: date, destinazione (link a Maps),
+   chi parte, programma giorno per giorno (con orari), liste (posti da
+   visitare, valigia con voci tipiche, da fare prima di partire, altre a
+   piacere), documenti su Drive con lettura automatica e salvataggio sul
+   telefono per l'uso offline, note. Tutti vedono tutto; "In evidenza" solo
+   per chi parte: conto alla rovescia nei 30 giorni prima, durante il
+   viaggio il programma di oggi. Niente gestione spese (non serve).
+7. **Schermata iniziale**
    - Parte superiore: riquadro riepilogativo con le scadenze più importanti
      (prese da to-do, calendario, lista spesa o qualunque altra lista).
      Regole attuali: to-do e voci di lista con scadenza entro 7 giorni;

@@ -8,8 +8,9 @@ import todo from './views/todo.js';
 import liste from './views/liste.js';
 import calendario from './views/calendario.js';
 import documenti from './views/documenti.js';
+import viaggi from './views/viaggi.js';
 
-const routes = { '': home, spesa, todo, liste, calendario, documenti };
+const routes = { '': home, spesa, todo, liste, calendario, viaggi, documenti };
 let root = document.getElementById('app');
 let cleanup = null;
 let routing = false;

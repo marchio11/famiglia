@@ -1,7 +1,7 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
 // Ricordati di aumentare VERSION a ogni modifica dei file, così i telefoni
 // scaricano la versione nuova.
-const VERSION = 'v18';
+const VERSION = 'v19';
 const CACHE = `casa-${VERSION}`;
 
 const FILES = [
@@ -15,6 +15,8 @@ const FILES = [
   'js/google.js',
   'js/drive.js',
   'js/scadenze.js',
+  'js/viaggi.js',
+  'js/offline.js',
   'js/ocr.js',
   'js/firebase-config.js',
   'js/store.js',
@@ -27,6 +29,7 @@ const FILES = [
   'js/views/liste.js',
   'js/views/calendario.js',
   'js/views/documenti.js',
+  'js/views/viaggi.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -46,7 +49,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Si cancellano solo le versioni vecchie dell'app, mai i documenti salvati
+      // sul telefono per i viaggi (cache "casa-offline").
+      .then((keys) => Promise.all(keys.filter((k) => /^casa-v\d+$/.test(k) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

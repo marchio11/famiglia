@@ -1,6 +1,6 @@
 import * as store from '../store.js';
 import {
-  esc, byWho, toast, formDialog, pageHead, dueTag, dateField, categorySelect, categoriesDialog,
+  esc, byWho, toast, formDialog, pageHead, dueTag, dateField, categorySelect, categoriesDialog, ymd,
 } from '../util.js';
 import { icon } from '../icons.js';
 
@@ -49,7 +49,8 @@ function addSection(listId, name) {
 
 /* ---------- Finestre ---------- */
 
-function listForm(list, presetType = 'altro') {
+/** Finestra lista. tripId: crea la lista dentro un viaggio. */
+export function listForm(list, presetType = 'altro', tripId = '') {
   const l = list || { name: '', emoji: '', type: presetType };
   const type = typeOf(l).id;
   formDialog({
@@ -73,14 +74,14 @@ function listForm(list, presetType = 'altro') {
       const t = TYPES.find((x) => x.id === v.type) || TYPES.at(-1);
       const data = { name: v.name, type: t.id, emoji: v.emoji || t.emoji };
       if (list) store.update('lists', list.id, data);
-      else location.hash = `#/liste/${store.add('lists', { ...data, sections: [] })}`;
+      else location.hash = `#/liste/${store.add('lists', { ...data, sections: [], ...(tripId ? { tripId } : {}) })}`;
     },
     onDelete: list
       ? () => {
           const items = store.getAll('listItems').filter((i) => i.listId === list.id);
           const removedList = store.remove('lists', list.id);
           const removedItems = store.remove('listItems', items.map((i) => i.id));
-          location.hash = '#/liste';
+          location.hash = list.tripId ? `#/viaggi/${list.tripId}` : '#/liste';
           toast(`Lista "${list.name}" eliminata`, {
             label: 'Annulla',
             run: () => {
@@ -134,9 +135,27 @@ function newSectionDialog(listId) {
 }
 
 /** Finestra completa per una voce: nuova (item = null) o modifica. */
+/** Ora facoltativa (menu ore/minuti, niente orologio di Android). */
+function timePick(value = '') {
+  const [h = '', m = '00'] = value ? value.split(':') : [];
+  const mins = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+  if (!mins.includes(m)) mins.push(m);
+  mins.sort();
+  return `
+    <div class="field">
+      <span>Ora (facoltativa)</span>
+      <div class="time-pick">
+        <select name="timeH" aria-label="Ora"><option value="">--</option>${Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map((x) => `<option ${x === h ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        <b>:</b>
+        <select name="timeM" aria-label="Minuti">${mins.map((x) => `<option ${x === m ? 'selected' : ''}>${x}</option>`).join('')}</select>
+      </div>
+    </div>`;
+}
+
 function itemForm(listId, item, prefill = '') {
   const list = store.get('lists', listId);
   const isLuogo = typeOf(list).id === 'luoghi';
+  const isProgram = !!list.program;
   const isNew = !item;
   const it = item || { text: prefill, section: target[listId] || '', due: '', notes: '', place: '' };
   const sections = list.sections || [];
@@ -149,17 +168,19 @@ function itemForm(listId, item, prefill = '') {
       <label class="field"><span>${isLuogo ? 'Nome del posto' : 'Testo'}</span><input name="text" required value="${esc(it.text)}" autocomplete="off"></label>
       ${categorySelect({
         name: 'section',
-        options: [{ value: '', label: 'Senza categoria' }, ...sections.map((s) => ({ value: s.id, label: s.name }))],
+        label: isProgram ? 'Giorno' : 'Categoria',
+        options: [{ value: '', label: isProgram ? 'Senza giorno' : 'Senza categoria' }, ...sections.map((s) => ({ value: s.id, label: s.name }))],
         selected: sections.some((s) => s.id === it.section) ? it.section : '',
         placeholder: isLuogo ? 'es. Pizzerie' : 'es. Urgenti',
       })}
       ${isLuogo ? `<label class="field"><span>Indirizzo o città</span><input name="place" value="${esc(it.place)}" placeholder="es. Via Roma 1, Bologna" autocomplete="off"></label>` : ''}
-      ${dateField('due', 'Data o scadenza (facoltativa)', it.due)}
+      ${isProgram ? timePick(it.time) : dateField('due', 'Data o scadenza (facoltativa)', it.due)}
       <label class="field"><span>Note</span><textarea name="notes" rows="3" placeholder="${isLuogo ? 'Consigliato da…, link, prezzi…' : 'Dettagli, link…'}">${esc(it.notes)}</textarea></label>`,
     onSubmit: (v) => {
       const section = v.section === '__new__' ? addSection(listId, v.sectionNew) : v.section;
-      const data = { text: v.text, section, due: v.due, notes: v.notes };
+      const data = { text: v.text, section, due: v.due || '', notes: v.notes };
       if (isLuogo) data.place = v.place;
+      if (isProgram) data.time = v.timeH ? `${v.timeH}:${v.timeM || '00'}` : '';
       if (isNew) store.add('listItems', { ...data, listId, done: false });
       else store.update('listItems', item.id, data);
     },
@@ -196,7 +217,7 @@ function index(root) {
   });
 
   const draw = () => {
-    const lists = store.getAll('lists').sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    const lists = store.getAll('lists').filter((l) => !l.tripId).sort((a, b) => a.name.localeCompare(b.name, 'it'));
     const items = store.getAll('listItems');
     if (!lists.length) {
       el.innerHTML = `
@@ -251,13 +272,13 @@ function row(it) {
     <div class="row ${it.done ? 'done' : ''}" data-id="${it.id}">
       <button class="check" type="button" data-act="toggle" aria-label="${it.done ? 'Togli la spunta' : 'Spunta'}: ${esc(it.text)}"></button>
       <div class="row-main" data-act="edit">
-        <div class="row-title">${esc(it.text)}</div>
+        <div class="row-title">${it.time ? `<span class="time-tag">${esc(it.time)}</span>` : ''}${esc(it.text)}</div>
         <div class="row-sub">${sub}</div>
       </div>
     </div>`;
 }
 
-function detail(root, id) {
+function detail(root, id, day = '') {
   if (!store.get('lists', id)) {
     location.replace('#/liste');
     return null;
@@ -267,7 +288,7 @@ function detail(root, id) {
     ${pageHead({
       title: '<span data-title></span>',
       count: ' ',
-      back: '#/liste',
+      back: store.get('lists', id).tripId ? `#/viaggi/${store.get('lists', id).tripId}` : '#/liste',
       actions: `
         <button class="icon-btn" type="button" data-sections aria-label="Gestisci categorie">${icon('tag')}</button>
         <button class="icon-btn" type="button" data-edit-list aria-label="Modifica lista">${icon('edit')}</button>`,
@@ -279,6 +300,15 @@ function detail(root, id) {
     </form>
     <div class="target" data-target></div>
     <div data-items></div>`;
+
+  // Programma di viaggio: si aggiunge nel giorno toccato, o in quello di oggi.
+  const startList = store.get('lists', id);
+  if (startList.program) {
+    const today = ymd(new Date());
+    const days = (startList.sections || []).map((x) => x.id);
+    if (day && days.includes(day)) target[id] = day;
+    else if (!target[id] && days.includes(today)) target[id] = today;
+  }
 
   const form = root.querySelector('[data-add]');
   const el = root.querySelector('[data-items]');
@@ -335,7 +365,8 @@ function detail(root, id) {
 
     root.querySelector('[data-title]').textContent = `${l.emoji || t.emoji} ${l.name}`;
     const items = store.getAll('listItems').filter((i) => i.listId === id);
-    const open = items.filter((i) => !i.done).sort((a, b) => a.createdAt - b.createdAt);
+    const open = items.filter((i) => !i.done)
+      .sort((a, b) => (l.program ? (a.time || '99').localeCompare(b.time || '99') : 0) || a.createdAt - b.createdAt);
     const done = items.filter((i) => i.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     root.querySelector('[data-count]').textContent = open.length || '';
 
@@ -382,7 +413,7 @@ function detail(root, id) {
   return store.subscribe(draw);
 }
 
-export default function liste(root, [id]) {
+export default function liste(root, [id, day]) {
   root.style.setProperty('--c', COLOR);
-  return id ? detail(root, id) : index(root);
+  return id ? detail(root, id, day) : index(root);
 }

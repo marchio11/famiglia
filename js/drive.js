@@ -407,3 +407,29 @@ export async function compressPhoto(file, maxSide = 2400) {
     return file;
   }
 }
+
+/* ---------- Viaggi ---------- */
+
+/** Cartella "Viaggi" dentro "Casa Marchionni" (creata la prima volta). */
+export async function tripsFolder() {
+  const c = config();
+  if (c.sections.viaggi) return c.sections.viaggi;
+  const f = await ensureFolder('Viaggi', c.rootId);
+  store.update('config', 'drive', { sections: { ...c.sections, viaggi: f.id } });
+  return f.id;
+}
+
+/** Crea la cartella dei documenti di un viaggio (es. "2027 Vienna"). */
+export async function createTripFolder(name) {
+  const parent = await tripsFolder();
+  return ensureFolder(name, parent);
+}
+
+/** Scarica il contenuto di un file (i documenti Google vengono esportati in PDF). */
+export async function download(file) {
+  const native = (file.mimeType || '').startsWith('application/vnd.google-apps');
+  const res = native
+    ? await google.request(`${API}/files/${file.id}/export`, { query: { mimeType: 'application/pdf' }, raw: true })
+    : await google.request(`${API}/files/${file.id}`, { query: { alt: 'media', supportsAllDrives: 'true' }, raw: true });
+  return res.blob();
+}

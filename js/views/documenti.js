@@ -621,6 +621,8 @@ function folderView(root, id) {
   }
 
   function backHref(folder) {
+    const trip = folder && store.getAll('viaggi').find((t) => t.folderId === folder.id);
+    if (trip) return `#/viaggi/${trip.id}`;
     const parent = folder?.parents?.[0];
     if (!parent || drive.isSectionFolder(parent) || parent === drive.config()?.rootId) return '#/documenti';
     return `#/documenti/${parent}`;
