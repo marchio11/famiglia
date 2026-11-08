@@ -1,12 +1,12 @@
 import * as store from '../store.js';
-import { esc, daysUntil, relDate, dueClass, avatar, memberColor } from '../util.js';
+import { esc, daysUntil, relDate, dueClass, avatar, memberColor, ymd } from '../util.js';
 import * as gcal from '../gcal.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
 import { assigneesOf } from './todo.js';
 
 const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
-const SUMMARY_MAX = 6;
+const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
 
 /** Raccoglie le scadenze da tutte le sezioni. */
 function upcoming() {
@@ -116,12 +116,46 @@ export default function home(root) {
       </div>
       <button class="who" type="button" data-who aria-label="Cambia utente"></button>
     </header>
-    <section class="summary card" data-summary aria-label="In evidenza"></section>
+    <section class="summary card" aria-labelledby="sum-title">
+      <header class="sum-head">
+        <span class="sum-badge">${icon('bell')}</span>
+        <h2 id="sum-title">In evidenza</h2>
+        <span class="sum-count" data-sum-count></span>
+      </header>
+      <div class="sum-list" data-sum-list></div>
+      <div class="sum-hint" data-sum-hint hidden></div>
+    </section>
     <h2 class="section-label">Sezioni</h2>
     <nav class="tiles" data-tiles></nav>
     <p class="version" data-version></p>`;
 
   const $ = (s) => root.querySelector(s);
+
+  /** Mostra al massimo SUMMARY_VISIBLE voci: le altre si vedono scorrendo. */
+  function fitSummary(scrollTop = 0) {
+    const list = $('[data-sum-list]');
+    const hint = $('[data-sum-hint]');
+    const rows = list.querySelectorAll('.sum-row');
+    const extra = rows.length - SUMMARY_VISIBLE;
+    if (extra <= 0) {
+      list.style.maxHeight = '';
+      list.classList.remove('scrolls', 'more');
+      hint.hidden = true;
+      return;
+    }
+    const last = rows[SUMMARY_VISIBLE - 1];
+    list.style.maxHeight = `${last.offsetTop + last.offsetHeight}px`;
+    list.classList.add('scrolls');
+    list.scrollTop = scrollTop;
+    const update = () => {
+      const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 4;
+      list.classList.toggle('more', !atEnd);
+      hint.hidden = atEnd;
+    };
+    hint.textContent = extra === 1 ? 'Scorri per vedere l\'altra ↓' : `Scorri per vedere le altre ${extra} ↓`;
+    list.onscroll = update;
+    update();
+  }
 
   // Numero di versione (dal nome della cache del service worker).
   if ('caches' in window) {
@@ -140,33 +174,39 @@ export default function home(root) {
     // Riquadro riepilogativo
     const items = upcoming();
     const urgent = store.getAll('spesa').filter((i) => !i.done && i.urgent);
-    let html = `<h2>${icon('bell', 'sm')} In evidenza</h2>`;
-    if (!items.length && !urgent.length) {
-      html += `<p class="empty">Tutto tranquillo: nessuna scadenza nei prossimi ${SUMMARY_DAYS} giorni 🌿</p>`;
-    }
-    for (const it of items.slice(0, SUMMARY_MAX)) {
-      html += `
-        <a class="sum-row" href="${it.href}" style="--c:${it.color}">
-          <span class="dot"></span>
-          <span class="txt">
-            <div class="t">${esc(it.title)}</div>
-            <div class="s"><span class="tag ${it.date ? dueClass(it.date) : 'overdue'}">${esc(it.date ? relDate(it.date) : '🚩 Priorità alta')}</span><span>${esc(it.sub)}</span></div>
-          </span>
-        </a>`;
-    }
     if (urgent.length) {
+      // I prodotti urgenti vanno tra le cose di oggi.
       const names = urgent.slice(0, 3).map((i) => i.name).join(', ') + (urgent.length > 3 ? '…' : '');
-      html += `
-        <a class="sum-row" href="#/spesa" style="--c:var(--c-spesa)">
-          <span class="dot"></span>
-          <span class="txt">
-            <div class="t">${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare</div>
-            <div class="s"><span class="tag urgent">Spesa</span><span>${esc(names)}</span></div>
-          </span>
-        </a>`;
+      const today = ymd(new Date());
+      const at = items.findIndex((it) => it.date > today);
+      items.splice(at === -1 ? items.length : at, 0, {
+        title: `${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare`,
+        sub: names,
+        href: '#/spesa',
+        color: 'var(--c-spesa)',
+        tag: { cls: 'urgent', text: 'Spesa' },
+      });
     }
-    if (items.length > SUMMARY_MAX) html += `<div class="sum-more">e altre ${items.length - SUMMARY_MAX} scadenze…</div>`;
-    $('[data-summary]').innerHTML = html;
+
+    const list = $('[data-sum-list]');
+    const prevScroll = list.scrollTop;
+    $('[data-sum-count]').textContent = items.length || '';
+    list.innerHTML = items.length
+      ? items.map((it) => {
+        const tag = it.tag || (it.date
+          ? { cls: dueClass(it.date), text: relDate(it.date) }
+          : { cls: 'overdue', text: '🚩 Priorità alta' });
+        return `
+          <a class="sum-row" href="${it.href}" style="--c:${it.color}">
+            <span class="dot"></span>
+            <span class="txt">
+              <div class="t">${esc(it.title)}</div>
+              <div class="s"><span class="tag ${tag.cls}">${esc(tag.text)}</span><span>${esc(it.sub)}</span></div>
+            </span>
+          </a>`;
+      }).join('')
+      : `<p class="empty">Tutto tranquillo: nessuna scadenza nei prossimi ${SUMMARY_DAYS} giorni 🌿</p>`;
+    fitSummary(prevScroll);
 
     // Riquadri delle sezioni
     $('[data-tiles]').innerHTML = TILES.map((t) => `

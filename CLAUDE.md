@@ -107,7 +107,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      Regole attuali: to-do e voci di lista con scadenza entro 7 giorni;
      to-do a **priorità alta** (anche senza data) solo per le persone
      assegnate (o per tutti se è di tutti); eventi del calendario entro 7
-     giorni (inclusi i privati di chi guarda); prodotti urgenti della spesa.
+     giorni (inclusi i privati di chi guarda); prodotti urgenti della spesa
+     (inseriti tra le cose di oggi). Massimo 3 voci visibili, le altre si
+     vedono scorrendo dentro il riquadro (con contatore e indicazione).
    - Parte inferiore: accesso alle sezioni sopra elencate.
 
 ## Account
