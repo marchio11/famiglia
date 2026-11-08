@@ -161,19 +161,30 @@ function eventForm(ev, onSaved, preset = {}) {
   form.addEventListener('change', sync);
   sync();
 
-  // Se cambia l'inizio, la fine si sposta un'ora dopo (se non è già più tardi).
+  // Se cambia l'inizio, la fine si sposta insieme mantenendo la durata
+  // (un'ora per i nuovi eventi). Se si cambia la fine, si ricorda la nuova durata.
+  const DAY = 24 * 60;
   const minutes = (n) => Number(form.elements[`${n}H`].value) * 60 + Number(form.elements[`${n}M`].value);
+  const durationNow = () => {
+    const d = (minutes('endTime') - minutes('startTime') + DAY) % DAY;
+    return d > 0 ? d : 60;
+  };
+  let duration = isNew ? 60 : durationNow();
   const onStart = () => {
-    if (minutes('endTime') > minutes('startTime')) return;
-    const end = (minutes('startTime') + 60) % (24 * 60);
+    const end = (minutes('startTime') + duration) % DAY;
     form.elements.endTimeH.value = String(Math.floor(end / 60)).padStart(2, '0');
     const m = String(end % 60).padStart(2, '0');
     const sel = form.elements.endTimeM;
     if (![...sel.options].some((o) => o.value === m)) sel.add(new Option(m, m));
     sel.value = m;
   };
+  const onEnd = () => {
+    duration = durationNow();
+  };
   form.elements.startTimeH.addEventListener('change', onStart);
   form.elements.startTimeM.addEventListener('change', onStart);
+  form.elements.endTimeH.addEventListener('change', onEnd);
+  form.elements.endTimeM.addEventListener('change', onEnd);
 }
 
 function confirmDelete(ev, onDone) {
