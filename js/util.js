@@ -224,7 +224,9 @@ export function categoriesDialog({ title, color, cats, hint = '', placeholder = 
   const row = (c) => `
     <div class="cat-row" data-cat="${esc(c.id)}">
       <input name="name:${esc(c.id)}" value="${esc(c.label)}" required aria-label="Nome categoria" autocomplete="off">
-      <button type="button" class="icon-btn" data-del aria-label="Elimina ${esc(c.label)}">${icon('trash', 'sm')}</button>
+      ${c.locked
+        ? '<span class="icon-btn locked" title="Non si può eliminare" aria-hidden="true">🔒</span>'
+        : `<button type="button" class="icon-btn" data-del aria-label="Elimina ${esc(c.label)}">${icon('trash', 'sm')}</button>`}
     </div>`;
   const dlg = formDialog({
     title,

@@ -117,6 +117,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 ## Sezioni
 
 1. **Spesa** — lista condivisa, spunta, categorie (predefinite + personalizzate).
+   Anche le categorie iniziali si possono rinominare o eliminare (override in
+   `spesaCats` con lo stesso id, `hidden: true` se eliminate; "Altro" non si
+   elimina); "Ripristina le categorie iniziali" toglie gli override.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente già in fase di inserimento).
 2. **To-do** — assegnatari (una, due o tutte e tre le persone; nessuno =

@@ -47,46 +47,84 @@ export function guessCategory(name) {
 
 /* ---------- Categorie (predefinite + personalizzate) ---------- */
 
-/** Tutte le categorie in ordine: predefinite, personalizzate, poi "Altro". */
+// Le categorie iniziali si possono rinominare o eliminare: le modifiche sono
+// salvate in "spesaCats" con lo stesso id della categoria iniziale
+// ({ name, emoji, hidden }). Quelle create dall'utente hanno un id nuovo.
+const isBuiltin = (id) => CATS.some((c) => c.id === id);
+
+/** Categorie iniziali con le modifiche applicate (comprese quelle eliminate). */
+function builtinCats() {
+  return CATS.map((c) => {
+    const o = store.get('spesaCats', c.id);
+    return { ...c, name: o?.name || c.name, emoji: o?.emoji || c.emoji, hidden: !!o?.hidden && c.id !== 'altro', builtin: true };
+  });
+}
+
+/** Tutte le categorie in ordine: iniziali, personalizzate, poi "Altro". */
 export function allCats() {
+  const builtin = builtinCats();
   const custom = store.getAll('spesaCats')
-    .sort((a, b) => a.createdAt - b.createdAt)
+    .filter((c) => !isBuiltin(c.id))
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
     .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji || '🏷️', custom: true }));
-  return [...CATS.filter((c) => c.id !== 'altro'), ...custom, CATS.find((c) => c.id === 'altro')];
+  return [...builtin.filter((c) => c.id !== 'altro' && !c.hidden), ...custom, builtin.find((c) => c.id === 'altro')];
 }
 
 const catExists = (id) => allCats().some((c) => c.id === id);
 const catLabel = (c) => `${c.emoji} ${c.name}`;
 
-/** Crea una categoria personalizzata (o riusa quella con lo stesso nome). */
+/** Crea una categoria (o riusa quella con lo stesso nome, anche se era stata eliminata). */
 function createCat(text) {
   const { emoji, name } = splitEmoji(text);
   const same = allCats().find((c) => c.name.toLowerCase() === name.toLowerCase());
   if (same) return same.id;
+  const hidden = builtinCats().find((c) => c.hidden && c.name.toLowerCase() === name.toLowerCase());
+  if (hidden) {
+    store.set('spesaCats', hidden.id, { ...store.get('spesaCats', hidden.id), hidden: false, ...(emoji ? { emoji } : {}) });
+    return hidden.id;
+  }
   return store.add('spesaCats', { name, emoji: emoji || '🏷️' });
 }
 
 function manageCats() {
-  const custom = allCats().filter((c) => c.custom);
-  categoriesDialog({
-    title: 'Categorie personalizzate',
+  const dlg = categoriesDialog({
+    title: 'Categorie della spesa',
     color: COLOR,
-    cats: custom.map((c) => ({ id: c.id, label: catLabel(c) })),
+    cats: allCats().map((c) => ({ id: c.id, label: catLabel(c), locked: c.id === 'altro' })),
     placeholder: 'es. 🐶 Animali',
-    hint: 'Puoi iniziare il nome con un\'emoji. Le categorie predefinite restano sempre; i prodotti di una categoria eliminata finiscono in "Altro".',
+    hint: 'Tocca un nome per cambiarlo, anche l\'emoji iniziale. I prodotti di una categoria eliminata finiscono in "Altro", che non si può eliminare.',
     onSave: ({ renamed, deleted, added }) => {
       for (const r of renamed) {
         const { emoji, name } = splitEmoji(r.label);
-        store.update('spesaCats', r.id, { name, emoji: emoji || '🏷️' });
+        if (!name) continue;
+        if (isBuiltin(r.id)) store.set('spesaCats', r.id, { ...store.get('spesaCats', r.id), name, emoji: emoji || CATS.find((c) => c.id === r.id).emoji, hidden: false });
+        else store.update('spesaCats', r.id, { name, emoji: emoji || '🏷️' });
       }
       for (const id of deleted) {
+        if (id === 'altro') continue;
         store.getAll('spesa').filter((i) => i.cat === id).forEach((i) => store.update('spesa', i.id, { cat: 'altro' }));
-        store.remove('spesaCats', id);
+        if (isBuiltin(id)) store.set('spesaCats', id, { ...store.get('spesaCats', id), hidden: true });
+        else store.remove('spesaCats', id);
       }
       added.forEach(createCat);
       if (renamed.length || deleted.length || added.length) toast('Categorie aggiornate');
     },
   });
+
+  // Ripristino delle categorie iniziali (nomi, emoji e quelle eliminate).
+  const changed = store.getAll('spesaCats').filter((c) => isBuiltin(c.id));
+  if (changed.length) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'link-btn restore-cats';
+    btn.textContent = '↺ Ripristina le categorie iniziali';
+    btn.onclick = () => {
+      store.remove('spesaCats', changed.map((c) => c.id));
+      dlg.close();
+      toast('Categorie iniziali ripristinate');
+    };
+    dlg.querySelector('.actions').before(btn);
+  }
 }
 
 /* ---------- Memoria dei prodotti ---------- */
@@ -101,7 +139,9 @@ function rememberCategory(name, cat) {
 }
 function categoryFor(name) {
   const saved = store.get('spesaMemo', memoKey(name))?.cat;
-  return saved && catExists(saved) ? saved : guessCategory(name);
+  if (saved && catExists(saved)) return saved;
+  const guess = guessCategory(name);
+  return catExists(guess) ? guess : 'altro'; // la categoria indovinata potrebbe essere stata eliminata
 }
 
 /* ---------- Aggiunta e modifica ---------- */
