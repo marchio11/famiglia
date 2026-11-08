@@ -79,35 +79,42 @@ export function syncProgramDays(t) {
 
 /* ---------- Liste iniziali ---------- */
 
+// Liste create con il viaggio: tutte vuote. La valigia ha una sezione per
+// ogni persona che parte (id = nome), il programma una per ogni giorno.
 export const STARTER_LISTS = [
   { key: 'program', name: 'Programma', emoji: '📅', type: 'cose' },
-  { key: 'luoghi', name: 'Posti da visitare', emoji: '📍', type: 'luoghi', sections: ['Da vedere', 'Ristoranti e locali'] },
-  {
-    key: 'valigia',
-    name: 'Valigia',
-    emoji: '🧳',
-    type: 'altro',
-    items: ['Documento d\'identità', 'Carte d\'imbarco / biglietti', 'Caricabatterie', 'Adattatore prese', 'Medicine', 'Spazzolino e dentifricio', 'Pigiama', 'Occhiali da sole'],
-  },
-  {
-    key: 'prima',
-    name: 'Da fare prima di partire',
-    emoji: '✅',
-    type: 'cose',
-    items: ['Check-in online', 'Salvare i documenti sul telefono', 'Controllare la scadenza dei documenti d\'identità'],
-  },
+  { key: 'luoghi', name: 'Posti da visitare', emoji: '📍', type: 'luoghi' },
+  { key: 'valigia', name: 'Valigia', emoji: '🧳', type: 'altro' },
+  { key: 'prima', name: 'Da fare prima di partire', emoji: '✅', type: 'cose' },
 ];
+
+/** Persone che partono (nessuna scelta = tutta la famiglia). */
+const travellers = (t) => (t.who?.length ? t.who : store.MEMBERS);
 
 function createStarterLists(t, keys) {
   for (const s of STARTER_LISTS.filter((x) => keys.includes(x.key))) {
-    const sections = s.key === 'program'
-      ? tripDays(t).map((d) => ({ id: d, name: dayName(d) }))
-      : (s.sections || []).map((name) => ({ id: store.uid(), name }));
-    const listId = store.add('lists', {
-      name: s.name, emoji: s.emoji, type: s.type, sections, tripId: t.id, program: s.key === 'program',
+    let sections = [];
+    if (s.key === 'program') sections = tripDays(t).map((d) => ({ id: d, name: dayName(d) }));
+    if (s.key === 'valigia') sections = travellers(t).map((m) => ({ id: m, name: m }));
+    store.add('lists', {
+      name: s.name,
+      emoji: s.emoji,
+      type: s.type,
+      sections,
+      tripId: t.id,
+      program: s.key === 'program',
+      packing: s.key === 'valigia',
     });
-    for (const text of s.items || []) store.add('listItems', { listId, text, section: '', done: false, due: '', notes: '' });
   }
+}
+
+/** Se cambiano i partecipanti, aggiunge alla valigia le sezioni mancanti. */
+export function syncPacking(t) {
+  const list = listsOf(t.id).find((l) => l.packing);
+  if (!list) return;
+  const sections = list.sections || [];
+  const added = travellers(t).filter((m) => !sections.some((x) => x.id === m)).map((m) => ({ id: m, name: m }));
+  if (added.length) store.update('lists', list.id, { sections: [...sections, ...added] });
 }
 
 /* ---------- Calendario ---------- */
@@ -154,7 +161,10 @@ export async function save(existing, data, { calendar = true, lists = [] } = {})
   if (existing) store.update('viaggi', id, data);
   else id = store.add('viaggi', { ...data, eventId: '', folderId: '' });
   const t = get(id);
-  if (existing) syncProgramDays(t);
+  if (existing) {
+    syncProgramDays(t);
+    syncPacking(t);
+  }
   else createStarterLists(t, lists);
 
   let calError = null;

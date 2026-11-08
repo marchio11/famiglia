@@ -169,7 +169,7 @@ function itemForm(listId, item, prefill = '') {
       ${categorySelect({
         name: 'section',
         label: isProgram ? 'Giorno' : 'Categoria',
-        options: [{ value: '', label: isProgram ? 'Senza giorno' : 'Senza categoria' }, ...sections.map((s) => ({ value: s.id, label: s.name }))],
+        options: [{ value: '', label: isProgram ? 'Senza giorno' : list.packing ? 'In comune' : 'Senza categoria' }, ...sections.map((s) => ({ value: s.id, label: s.name }))],
         selected: sections.some((s) => s.id === it.section) ? it.section : '',
         placeholder: isLuogo ? 'es. Pizzerie' : 'es. Urgenti',
       })}
@@ -309,6 +309,10 @@ function detail(root, id, day = '') {
     if (day && days.includes(day)) target[id] = day;
     else if (!target[id] && days.includes(today)) target[id] = today;
   }
+  // Valigia: si parte dalla propria sezione.
+  if (startList.packing && target[id] === undefined && (startList.sections || []).some((x) => x.id === store.getUser())) {
+    target[id] = store.getUser();
+  }
 
   const form = root.querySelector('[data-add]');
   const el = root.querySelector('[data-items]');
@@ -373,7 +377,7 @@ function detail(root, id, day = '') {
     // Dove finiscono le voci aggiunte con "+"
     root.querySelector('[data-target]').innerHTML = sections.length
       ? `<span class="lbl">Aggiungi in:</span>
-         ${[{ id: '', name: 'Senza categoria' }, ...sections].map((s) => `<button class="chip" type="button" data-sec="${s.id}" aria-pressed="${(target[id] || '') === s.id}">${esc(s.name)}</button>`).join('')}
+         ${[{ id: '', name: l.packing ? 'In comune' : 'Senza categoria' }, ...sections].map((s) => `<button class="chip" type="button" data-sec="${s.id}" aria-pressed="${(target[id] || '') === s.id}">${esc(s.name)}</button>`).join('')}
          <button class="chip dashed" type="button" data-sec="__new__">+ Categoria</button>`
       : `<button class="chip dashed" type="button" data-sec="__new__">+ Dividi in categorie</button>`;
 
@@ -389,7 +393,7 @@ function detail(root, id, day = '') {
       html += `<section class="group"><div class="card rows">${open.map(row).join('')}</div></section>`;
     } else {
       const known = new Set(sections.map((s) => s.id));
-      for (const s of [...sections, { id: '', name: 'Senza categoria' }]) {
+      for (const s of [...sections, { id: '', name: l.packing ? 'In comune' : 'Senza categoria' }]) {
         const g = open.filter((i) => (known.has(i.section) ? i.section : '') === s.id);
         if (!g.length) continue;
         html += `

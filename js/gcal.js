@@ -261,7 +261,8 @@ export async function createEvent(cal, f) {
   for (const k of ['start', 'end']) Object.keys(body[k]).forEach((x) => body[k][x] === null && delete body[k][x]);
   if (f.repeat) body.recurrence = [`RRULE:FREQ=${f.repeat}`];
   const created = await api(`/calendars/${enc(requireCal(cal))}/events`, { method: 'POST', body });
-  return created ? normalize(created, cal) : null;
+  if (!created) return null;
+  return created.start ? normalize(created, cal) : { id: created.id, cal };
 }
 
 export async function updateEvent(ev, cal, f) {

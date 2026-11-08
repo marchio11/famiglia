@@ -161,9 +161,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - Configurazione: cartella "Casa Marchionni" creata dall'account di
      famiglia e condivisa come Editor; API Google Drive abilitata.
 6. **Viaggi** — ogni viaggio raccoglie: date, destinazione (link a Maps),
-   chi parte, programma giorno per giorno (con orari), liste (posti da
-   visitare, valigia con voci tipiche, da fare prima di partire, altre a
-   piacere), documenti su Drive con lettura automatica e salvataggio sul
+   chi parte, programma giorno per giorno (con orari), liste create vuote
+   (posti da visitare, valigia con una sezione per ogni persona che parte,
+   da fare prima di partire, altre a piacere), documenti su Drive con lettura automatica e salvataggio sul
    telefono per l'uso offline, note. Tutti vedono tutto; "In evidenza" solo
    per chi parte: conto alla rovescia nei 30 giorni prima, durante il
    viaggio il programma di oggi. Niente gestione spese (non serve).

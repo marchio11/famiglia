@@ -59,7 +59,7 @@ function tripForm(t) {
       </fieldset>
       ${isNew ? `
       <fieldset class="field"><legend>Liste da preparare</legend>
-        ${trips.STARTER_LISTS.map((l) => `<label class="switch cal"><input type="checkbox" name="lists" value="${l.key}" checked><span>${l.emoji} ${esc(l.name)}${l.key === 'program' ? ' (un giorno per categoria)' : l.items ? ' (con le voci tipiche)' : ''}</span></label>`).join('')}
+        ${trips.STARTER_LISTS.map((l) => `<label class="switch cal"><input type="checkbox" name="lists" value="${l.key}" checked><span>${l.emoji} ${esc(l.name)}</span></label>`).join('')}
       </fieldset>` : ''}
       <label class="field"><span>Note</span><textarea name="notes" rows="3" placeholder="Indirizzo dell'hotel, numeri utili…">${esc(v0.notes)}</textarea></label>
       ${google.available() ? `<label class="switch cal"><input type="checkbox" name="calendar" ${isNew || t.eventId ? 'checked' : ''}><span>Mostra il viaggio nel calendario Famiglia</span></label>` : ''}`,
