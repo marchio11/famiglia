@@ -141,8 +141,32 @@ if (store.CLOUD) {
   if (!store.getUser()) pickUser({ required: true });
 }
 
+/* ---------- Aggiornamenti dell'app ---------- */
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker non registrato', e));
+  const hadController = !!navigator.serviceWorker.controller;
+
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+      // Controlla se c'è una versione nuova ogni volta che l'app torna in primo piano.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+    } catch (e) {
+      console.warn('Service worker non registrato', e);
+    }
+  });
+
+  // È arrivata una versione nuova: ricarica (se non si sta compilando un modulo).
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    if (document.querySelector('dialog[open]')) {
+      toast('È disponibile una nuova versione', { label: 'Aggiorna', run: () => location.reload() });
+      return;
+    }
+    reloading = true;
+    location.reload();
   });
 }

@@ -33,7 +33,10 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 ### Struttura del codice
 
 - `index.html` — punto di ingresso; `manifest.webmanifest` + `sw.js` per la PWA
-  (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`.
+  (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`:
+  il numero compare in fondo alla home ("versione N"). Il service worker
+  scarica i file con `cache: 'reload'` (GitHub Pages ha max-age 10 min), l'app
+  controlla aggiornamenti quando torna in primo piano e si ricarica da sola.
 - `css/style.css` — grafica (tema chiaro/scuro automatico).
 - `js/store.js` — strato dati con API sincrona (`getAll`, `get`, `add`,
   `update`, `set`, `remove`, `restore`, `subscribe`). Due modalità:

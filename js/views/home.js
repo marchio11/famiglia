@@ -118,9 +118,18 @@ export default function home(root) {
     </header>
     <section class="summary card" data-summary aria-label="In evidenza"></section>
     <h2 class="section-label">Sezioni</h2>
-    <nav class="tiles" data-tiles></nav>`;
+    <nav class="tiles" data-tiles></nav>
+    <p class="version" data-version></p>`;
 
   const $ = (s) => root.querySelector(s);
+
+  // Numero di versione (dal nome della cache del service worker).
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      const v = keys.map((k) => k.match(/^casa-v(\d+)$/)?.[1]).filter(Boolean).sort((a, b) => b - a)[0];
+      if (v) $('[data-version]').textContent = `Casa Marchionni · versione ${v}`;
+    }).catch(() => {});
+  }
   $('[data-who]').onclick = () => pickUser();
 
   const draw = () => {

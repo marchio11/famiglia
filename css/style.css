@@ -660,3 +660,4 @@ dialog.sheet h2:focus { outline: none; }
 .banner.column { flex-direction: column; gap: 8px; }
 .banner.column small { color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
 .banner.column .btn { align-self: flex-start; height: 44px; text-decoration: none; }
+.version { text-align: center; color: var(--muted); font-size: .75rem; margin: 24px 0 0; }
