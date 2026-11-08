@@ -1,7 +1,7 @@
 import * as store from '../store.js';
 import * as gcal from '../gcal.js';
 import {
-  esc, pageHead, formDialog, toast, dateField, addDays, ymd, daysUntil, memberColor,
+  esc, pageHead, formDialog, toast, dateField, addDays, ymd, daysUntil, memberColor, avatar,
 } from '../util.js';
 import { icon } from '../icons.js';
 
@@ -90,6 +90,12 @@ function eventForm(ev, onSaved) {
         </div>
         <p class="hint" data-cal-hint></p>
       </fieldset>
+      <fieldset class="field" data-who-field><legend>Chi è coinvolto?</legend>
+        <div class="who-pick">
+          ${store.MEMBERS.map((m) => `<label><input type="checkbox" name="who" value="${m}" ${(f.who || []).includes(m) ? 'checked' : ''}><span>${avatar(m, 'xs')}${m}</span></label>`).join('')}
+        </div>
+        <p class="hint">Lo vedono tutti nel calendario, ma compare "In evidenza" solo a chi è coinvolto. Nessuno scelto = tutta la famiglia.</p>
+      </fieldset>
       <label class="switch"><input type="checkbox" name="allDay" ${f.allDay ? 'checked' : ''}> Tutto il giorno (es. scadenze, compleanni)</label>
       ${dateField('date', 'Data', f.date)}
       <div class="field-row" data-times>
@@ -115,8 +121,10 @@ function eventForm(ev, onSaved) {
         return false;
       }
       const cal = lockCal ? ev.cal : v.cal;
+      const picked = new FormData(form).getAll('who');
       const data = {
         ...v,
+        who: cal === 'famiglia' && picked.length < store.MEMBERS.length ? picked : [],
         startTime: `${v.startTimeH}:${v.startTimeM}`,
         endTime: `${v.endTimeH}:${v.endTimeM}`,
         allDay: !!v.allDay,
@@ -141,6 +149,7 @@ function eventForm(ev, onSaved) {
     form.querySelector('[data-times]').hidden = allDay;
     form.querySelector('[data-enddate]').hidden = !allDay;
     const cal = form.querySelector('input[name=cal]:checked')?.value;
+    form.querySelector('[data-who-field]').hidden = cal === 'privato';
     form.querySelector('[data-cal-hint]').textContent = cal === 'privato'
       ? 'Finisce nel tuo calendario Google personale: gli altri non lo vedono.'
       : `Finisce nel calendario "${gcal.FAMILY_NAME}": lo vedono tutti e tre.`;
@@ -194,6 +203,7 @@ function eventRow(e) {
   }
   const tags = [
     e.cal === 'privato' ? '<span class="tag priv">🔒 Solo io</span>' : '',
+    e.cal === 'famiglia' && e.who?.length ? `<span class="who-mini">${e.who.map((m) => avatar(m, 'xs')).join('')}${e.who.length === 1 ? esc(e.who[0]) : ''}</span>` : '',
     e.location ? `<span>📍 ${esc(e.location)}</span>` : '',
     e.recurring ? '<span>🔁</span>' : '',
   ].filter(Boolean).join('');

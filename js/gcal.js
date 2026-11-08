@@ -97,6 +97,9 @@ function normalize(e, cal) {
     recurring: !!e.recurringEventId,
     reminders: e.reminders || { useDefault: true },
     link: e.htmlLink || '',
+    // Persone coinvolte (solo eventi Famiglia; vuoto = tutta la famiglia).
+    // Salvate nell'evento stesso, così le vedono tutti i telefoni.
+    who: (e.extendedProperties?.shared?.who || '').split(',').filter(Boolean),
   };
 }
 
@@ -123,6 +126,9 @@ export function lastDay(e) {
   }
   return ymd(new Date(e.end || e.start));
 }
+
+/** L'evento riguarda questa persona? (privati: sempre; Famiglia: se coinvolta o se è di tutti) */
+export const concerns = (e, name) => e.cal === 'privato' || !e.who?.length || e.who.includes(name);
 
 /** Evento con orario già terminato (quelli di tutto il giorno valgono fino a sera). */
 export const isOver = (e) => !e.allDay && new Date(e.end || e.start) < new Date();
@@ -207,6 +213,7 @@ function toGoogle(f) {
   if (f.reminder === 'default') body.reminders = { useDefault: true };
   else if (f.reminder === 'none') body.reminders = { useDefault: false, overrides: [] };
   else body.reminders = { useDefault: false, overrides: String(f.reminder).split(',').map((m) => ({ method: 'popup', minutes: Number(m) })) };
+  if (f.who) body.extendedProperties = { shared: { who: f.who.join(',') } };
   return body;
 }
 
@@ -256,6 +263,7 @@ export function toForm(ev) {
     notes: ev.notes,
     reminder,
     repeat: '',
+    who: ev.who || [],
   };
 }
 

@@ -105,6 +105,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      *personale* di chi li crea (gli altri non possono vederli). L'app mostra
      calendario Famiglia + calendario personale dell'utente, e anche la home
      include gli eventi privati di chi la sta guardando.
+   - Eventi Famiglia con **persone coinvolte** (facoltative; nessuna = tutti),
+     salvate nell'evento in `extendedProperties.shared.who` ("Andrea,Laura"):
+     tutti li vedono nel calendario, ma "In evidenza" solo i coinvolti.
    - Promemoria: impostati via API valgono solo per chi crea l'evento; gli
      altri ricevono le notifiche predefinite del calendario Famiglia
      (impostazione dell'app Google Calendar di ciascuno).
@@ -117,6 +120,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - Veicoli: Toyota Yaris, Hyundai i10, Camper (+ nuovi dall'app).
    - Immobili: una cartella per ogni immobile.
    - Animali: Tokyo (il cane).
+   - Al livello di un elemento (persona, veicolo…) solo scadenze e
+     sottocartelle: i documenti si caricano nelle sottocartelle (file messi
+     lì direttamente da Drive compaiono come "Altri documenti").
    - Gestione scadenze per ogni elemento, con "Rinnovata" che propone la
      prossima data; in home compaiono 30 giorni prima.
    - Configurazione: cartella "Casa Marchionni" creata dall'account di
@@ -127,7 +133,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      Regole attuali: to-do e voci di lista con scadenza entro 7 giorni;
      to-do a **priorità alta** (anche senza data) solo per le persone
      assegnate (o per tutti se è di tutti); eventi del calendario entro 7
-     giorni (inclusi i privati di chi guarda); prodotti urgenti della spesa
+     giorni (inclusi i privati di chi guarda; quelli Famiglia con persone
+     coinvolte solo per loro); scadenze documenti entro 30 giorni; prodotti urgenti della spesa
      (inseriti tra le cose di oggi). Massimo 3 voci visibili, le altre si
      vedono scorrendo dentro il riquadro (contatore + barra di scorrimento
      disegnata a mano, sempre visibile: quella di Android si nasconde).

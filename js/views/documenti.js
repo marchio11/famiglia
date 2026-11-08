@@ -472,7 +472,7 @@ function folderView(root, id) {
         <section class="group">
           <h3 class="group-head"><span>⏰ Scadenze</span><button class="link-btn" type="button" data-new-scad>+ Aggiungi</button></h3>
           ${list.length ? `<div class="card rows">${list.map((s) => scadRow(s)).join('')}</div>`
-            : '<p class="hint empty-sec">Nessuna scadenza. Aggiungi bollo, revisione, documenti in scadenza…</p>'}
+            : '<p class="hint empty-sec">Nessuna scadenza.</p>'}
           ${entity.kind === 'veicolo' && info?.immatricolazione ? `<p class="hint">Immatricolato il ${new Date(`${info.immatricolazione}T12:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : ''}
         </section>`;
     }
@@ -491,9 +491,11 @@ function folderView(root, id) {
             </a>`).join('')}</div>
         </section>`;
     }
-    html += `
+    // Al livello di una persona/veicolo/… i documenti vanno nelle sottocartelle:
+    // la sezione compare solo se qualcuno ha messo dei file qui da Drive.
+    if (!entity || files.length) html += `
       <section class="group">
-        <h3 class="group-head"><span>📄 Documenti</span></h3>
+        <h3 class="group-head"><span>📄 ${entity ? 'Altri documenti' : 'Documenti'}</span></h3>
         ${files.length ? `<div class="card rows">${files.map((f) => `
           <div class="row doc-file" data-file="${esc(f.id)}">
             <a class="row-main doc-open" href="${esc(f.webViewLink || '#')}" target="_blank" rel="noopener">
@@ -503,7 +505,8 @@ function folderView(root, id) {
             <button class="icon-btn" type="button" data-file-menu aria-label="Opzioni documento">⋯</button>
           </div>`).join('')}</div>`
           : `<p class="hint empty-sec">Nessun documento in questa cartella. Tocca <b>Aggiungi</b> per scattare una foto o caricare un file.</p>`}
-      </section>
+      </section>`;
+    html += `
       <p class="hint center">Aggiornato ${new Date(data.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>`;
     $('[data-body]').innerHTML = html;
   }
@@ -548,9 +551,15 @@ function folderView(root, id) {
     }
     const folder = drive.cachedFolder(id)?.folder;
     if (e.target.closest('[data-fab]')) {
+      const entity = entityOf(folder);
       withPermission(() => menu('Aggiungi', [
-        { icon: '📷', label: 'Scatta una foto', run: () => $('[data-camera]').click() },
-        { icon: '📄', label: 'Carica un file dal telefono', run: () => $('[data-files]').click() },
+        // Persona/veicolo/…: scadenze e cartelle; dentro le sottocartelle: documenti.
+        ...(entity ? [
+          { icon: '⏰', label: 'Nuova scadenza', run: () => scadenzaForm(entity, null) },
+        ] : [
+          { icon: '📷', label: 'Scatta una foto', run: () => $('[data-camera]').click() },
+          { icon: '📄', label: 'Carica un file dal telefono', run: () => $('[data-files]').click() },
+        ]),
         { icon: '📁', label: 'Nuova cartella', run: () => nameDialog({ title: 'Nuova cartella', placeholder: 'es. Fatture', submitLabel: 'Crea' }, (name) => {
           drive.createFolder(name, id).then(() => { toast('Cartella creata ✓'); load(); }).catch((err) => toast(drive.explain(err)));
         }) },

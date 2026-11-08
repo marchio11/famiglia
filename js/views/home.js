@@ -59,7 +59,7 @@ function upcoming() {
   // Quelli creati dalle scadenze non vengono ripetuti.
   const fromScad = scad.eventIds();
   for (const e of gcal.available() ? gcal.cached()?.events || [] : []) {
-    if (gcal.isOver(e) || fromScad.has(e.id)) continue;
+    if (gcal.isOver(e) || fromScad.has(e.id) || !gcal.concerns(e, me)) continue;
     const day = gcal.dayKey(e);
     if (daysUntil(day) > SUMMARY_DAYS) continue;
     const when = e.allDay ? 'tutto il giorno' : `ore ${gcal.timeOf(e.start)}`;
@@ -67,14 +67,12 @@ function upcoming() {
     items.push({
       date: day,
       title: e.title,
-      sub: `${priv ? '🔒 Solo tu' : 'Calendario'} · ${when}`,
+      sub: `${priv ? '🔒 Solo tu' : `Calendario${e.who?.length ? ` · ${e.who.map((m) => (m === me ? 'tu' : m)).join(' e ')}` : ''}`} · ${when}`,
       href: '#/calendario',
       color: priv ? memberColor(me) : 'var(--c-cal)',
       order: e.allDay ? 0 : gcal.startDate(e).getTime(),
     });
   }
-
-  // In Fase 4 qui arriveranno le scadenze dei documenti.
 
   items.sort((a, b) => a.date.localeCompare(b.date) || (a.order || 0) - (b.order || 0));
   return items;
