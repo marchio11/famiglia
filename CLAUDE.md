@@ -71,6 +71,20 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   kind, type, label, date, notes, eventId}) + evento tutto il giorno nel
   calendario Famiglia (promemoria 7 giorni e 1 giorno prima). Dati veicolo
   (immatricolazione) in `docInfo/<folderId>`.
+- `js/ocr.js` — interpreta il testo letto: tipo di documento, date con
+  significato (scadenza, rilascio, nascita, immatricolazione, ultima
+  revisione: vince la parola chiave più vicina sulla stessa riga), targa.
+  Funzioni pure, testabili con node.
+- OCR = Google Drive (gratis): `drive.readText()` copia il file convertendolo
+  in Google Doc (`ocrLanguage=it`), esporta il testo e cancella la copia.
+  Funziona su foto e PDF già presenti (menu ⋯ "Leggi e trova scadenze") e
+  su foto nuove ("Fotografa e leggi"). Le foto vengono ridotte (max 2400 px,
+  JPEG) prima del caricamento. Una scadenza creata così conserva il link al
+  documento (`docLink`, `docName`).
+- Ricerca: `drive.search()` usa `fullText contains` di Drive (che indicizza
+  anche il testo di foto e PDF, compresi quelli importati) e tiene solo i
+  file dentro "Casa Marchionni" (albero delle cartelle ricostruito e tenuto
+  10 minuti in memoria).
 - `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
@@ -159,7 +173,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   - carta d'identità / patente: dalla data stampata sul documento.
 - Le scadenze diventano eventi sul Google Calendar "Famiglia" con promemoria
   (le notifiche arrivano dall'app Calendar, nessun server necessario).
-- In futuro, opzionale: lettura automatica dei documenti (OCR sul telefono).
+- Lettura automatica dei documenti (OCR tramite Google Drive) e ricerca nel
+  testo dei documenti: fatte ✅ (sempre con conferma dell'utente).
 
 ## Piano
 

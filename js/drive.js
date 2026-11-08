@@ -283,3 +283,125 @@ export const explain = (err) => {
   if (err?.code === 'noroot') return err.message;
   return google.explain(err);
 };
+
+/* ---------- Lettura del testo (OCR di Google Drive) ---------- */
+
+const GDOC = 'application/vnd.google-apps.document';
+
+/** Formati da cui Drive sa ricavare il testo. */
+export const canRead = (f) => /^image\/(jpeg|png|gif|webp)|application\/pdf/.test(f.mimeType || '') || f.mimeType === GDOC;
+
+/**
+ * Restituisce il testo di un file su Drive. Drive ne fa una copia convertita
+ * in documento Google (riconoscendo il testo di foto e PDF), l'app legge il
+ * testo e cancella subito la copia.
+ */
+export async function readText(fileId) {
+  const copy = await google.request(`${API}/files/${fileId}/copy`, {
+    method: 'POST',
+    query: { ocrLanguage: 'it', fields: 'id', supportsAllDrives: 'true' },
+    json: { mimeType: GDOC, name: 'Casa Marchionni - lettura temporanea' },
+  });
+  try {
+    const res = await google.request(`${API}/files/${copy.id}/export`, { query: { mimeType: 'text/plain' }, raw: true });
+    return await res.text();
+  } finally {
+    google.request(`${API}/files/${copy.id}`, { method: 'DELETE' }).catch(() => {});
+  }
+}
+
+/**
+ * Trova la persona/veicolo/… a cui appartiene una cartella, risalendo le
+ * cartelle che la contengono. Restituisce { id, name, kind } o null.
+ */
+export async function findEntity(folderId) {
+  let id = folderId;
+  for (let i = 0; i < 6 && id; i += 1) {
+    if (isSectionFolder(id) || id === config()?.rootId) return null;
+    const f = cachedFolder(id)?.folder || await getFile(id);
+    const kind = kindOfParent(f.parents?.[0]);
+    if (kind) return { id: f.id, name: f.name, kind };
+    id = f.parents?.[0];
+  }
+  return null;
+}
+
+/* ---------- Ricerca ---------- */
+
+/** Tutte le cartelle dentro "Casa Marchionni": Map id -> { name, parent }. */
+let tree = null;
+let treeAt = 0;
+async function folderTree() {
+  if (tree && Date.now() - treeAt < 10 * 60_000) return tree;
+  const c = config();
+  const map = new Map([[c.rootId, { name: ROOT_NAME, parent: null }]]);
+  let level = [c.rootId];
+  while (level.length) {
+    const next = [];
+    for (let i = 0; i < level.length; i += 40) {
+      const chunk = level.slice(i, i + 40);
+      const found = await list(`(${chunk.map((id) => `'${id}' in parents`).join(' or ')}) and mimeType = '${FOLDER}' and trashed = false`, 'id,name,parents');
+      for (const f of found) {
+        if (map.has(f.id)) continue;
+        map.set(f.id, { name: f.name, parent: f.parents?.find((p) => map.has(p)) });
+        next.push(f.id);
+      }
+    }
+    level = next;
+  }
+  tree = map;
+  treeAt = Date.now();
+  return tree;
+}
+
+/** Percorso leggibile di una cartella, es. "Veicoli › Toyota Yaris › Bollo". */
+function pathOf(map, folderId) {
+  const parts = [];
+  let id = folderId;
+  while (id && map.has(id) && id !== config().rootId) {
+    parts.unshift(map.get(id).name);
+    id = map.get(id).parent;
+  }
+  return parts.filter((p) => p !== 'Altri familiari' || parts.length < 3).join(' › ');
+}
+
+/**
+ * Cerca nel nome e nel testo dei documenti (Drive legge anche il testo di
+ * foto e PDF). Restituisce solo i file dentro "Casa Marchionni".
+ */
+export async function search(text) {
+  const words = text.trim().split(/\s+/).filter(Boolean).slice(0, 6);
+  if (!words.length) return [];
+  const [map, found] = await Promise.all([
+    folderTree(),
+    list(`${words.map((w) => `fullText contains '${q(w)}'`).join(' and ')} and trashed = false`, `${FILE_FIELDS}`),
+  ]);
+  return found
+    .filter((f) => f.parents?.some((p) => map.has(p)))
+    .map((f) => {
+      const parent = f.parents.find((p) => map.has(p));
+      return { ...f, folderId: parent, path: pathOf(map, parent) };
+    });
+}
+
+/* ---------- Foto più leggere ---------- */
+
+/**
+ * Riduce una foto (lato lungo max 2400 px, JPEG): i documenti restano ben
+ * leggibili, occupano meno spazio e la lettura del testo è più affidabile.
+ */
+export async function compressPhoto(file, maxSide = 2400) {
+  if (!/^image\/(jpeg|png|webp)/.test(file.type) || file.size < 900_000) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file;
+  } catch {
+    return file;
+  }
+}

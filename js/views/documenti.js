@@ -1,6 +1,7 @@
 import * as store from '../store.js';
 import * as drive from '../drive.js';
 import * as scad from '../scadenze.js';
+import { analyze } from '../ocr.js';
 import {
   esc, pageHead, formDialog, toast, dateField, avatar, relDate, dueClass, daysUntil,
 } from '../util.js';
@@ -213,7 +214,127 @@ function scadenzaMenu(entity, s) {
   menu(`${scad.label(s)} · ${relDate(s.date)}`, [
     { icon: '✅', label: 'Rinnovata: imposta la prossima scadenza', run: () => withPermission(() => renewForm(s)) },
     { icon: '✏️', label: 'Modifica', run: () => withPermission(() => scadenzaForm(entity, s)) },
+    ...(s.docLink ? [{ icon: '📎', label: `Apri il documento (${s.docName || 'file'})`, run: () => window.open(s.docLink, '_blank', 'noopener') }] : []),
   ]);
+}
+
+/* ---------- Lettura dei documenti (OCR) ---------- */
+
+const fmtDate = (d) => new Date(`${d}T12:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/**
+ * Legge il testo di un file su Drive e propone nome, scadenza e dati utili.
+ * file: { id, name, mimeType, webViewLink }; folderId: cartella che lo contiene.
+ */
+async function readAndPropose(file, folderId, { isNew = false, onBusy = () => {}, onDone = () => {} } = {}) {
+  let entity = null;
+  let result;
+  try {
+    onBusy('Leggo il documento… (qualche secondo)');
+    [entity, result] = await Promise.all([
+      drive.findEntity(folderId).catch((err) => {
+        console.warn('Elemento della cartella non trovato', err);
+        return null;
+      }),
+      drive.readText(file.id).then((text) => text),
+    ]);
+  } catch (err) {
+    onBusy('');
+    toast(`Lettura non riuscita: ${drive.explain(err)}`);
+    return;
+  }
+  onBusy('');
+  const r = analyze(result, entity?.kind);
+  ocrDialog(file, entity, r, { isNew, onDone });
+}
+
+function ocrDialog(file, entity, r, { isNew, onDone }) {
+  const ext = file.name.match(/\.\w{2,4}$/)?.[0] || '';
+  const proposedName = isNew
+    ? `${r.docName || 'Documento'}${entity ? ` ${entity.name}` : ''}${ext}`
+    : file.name;
+  const kind = entity?.kind;
+  const types = kind ? scad.typesFor(kind) : [];
+  const scadType = r.scadType || 'altro';
+  // Data proposta: scadenza letta; per la revisione si calcola dall'ultima o dall'immatricolazione.
+  let proposed = r.expiry;
+  if (kind === 'veicolo' && scadType === 'revisione' && !proposed) {
+    if (r.revisione) proposed = scad.renewDate({ kind: 'veicolo', type: 'revisione', date: r.revisione });
+    else if (r.immatricolazione) proposed = scad.nextRevisione(r.immatricolazione);
+  }
+  const info = entity ? store.get('docInfo', entity.id) || {} : {};
+  const futureDates = r.dates.filter((d) => d.role !== 'nascita');
+
+  const dlg = formDialog({
+    title: r.hasText ? 'Ecco cosa ho letto 🔍' : 'Non sono riuscito a leggere 😕',
+    color: COLOR,
+    autofocus: false,
+    submitLabel: 'Conferma',
+    body: `
+      ${r.hasText ? `
+        <p class="ocr-found">${r.docName ? `Sembra: <b>${esc(r.docName)}</b>` : 'Tipo di documento non riconosciuto'}${r.targa ? ` · targa <b>${esc(r.targa)}</b>` : ''}</p>
+        ${r.dates.length ? `<p class="hint">Date trovate: ${r.dates.map((d) => `${esc(d.label)} ${fmtDate(d.date)}`).join(' · ')}</p>` : '<p class="hint">Nessuna data trovata.</p>'}`
+        : '<p class="hint">Il testo non è leggibile. Prova con una foto dritta, ben illuminata e senza riflessi. Il documento è stato comunque salvato.</p>'}
+      <label class="field"><span>Nome del file</span><input name="name" required value="${esc(proposedName)}" autocomplete="off"></label>
+      ${entity && r.hasText ? `
+        <label class="switch cal"><input type="checkbox" name="makeScad" ${proposed ? 'checked' : ''}><span>Crea una scadenza per <b>${esc(entity.name)}</b></span></label>
+        <div data-scad-fields>
+          <label class="field"><span>Tipo</span>
+            <select name="type">${types.map((t) => `<option value="${t.id}" ${t.id === scadType ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+          </label>
+          <label class="field" data-label-field><span>Descrizione</span><input name="label" value="${esc(r.docName)}" autocomplete="off"></label>
+          <div class="field">
+            <label><span>Data di scadenza</span><input type="date" name="date" value="${esc(proposed)}"></label>
+            ${futureDates.length ? `<div class="quick-dates">${futureDates.map((d) => `<button type="button" class="chip" data-target="date" data-set-date="${d.date}">${esc(d.label)} · ${fmtDate(d.date)}</button>`).join('')}</div>` : ''}
+          </div>
+          ${kind === 'veicolo' && r.immatricolazione ? `<label class="switch cal"><input type="checkbox" name="saveImm" ${info.immatricolazione === r.immatricolazione ? '' : 'checked'}> Salva l'immatricolazione: ${fmtDate(r.immatricolazione)}</label>` : ''}
+          <label class="switch cal"><input type="checkbox" name="calendar" checked> Aggiungi al calendario Famiglia</label>
+        </div>` : ''}`,
+    onSubmit: (v, form) => {
+      const makeScad = !!v.makeScad && entity;
+      if (makeScad && !v.date) {
+        form.elements.date.focus();
+        toast('Inserisci la data di scadenza');
+        return false;
+      }
+      const tasks = [];
+      if (v.name && v.name !== file.name) tasks.push(drive.rename(file.id, v.name));
+      if (v.saveImm && entity) store.set('docInfo', entity.id, { ...info, immatricolazione: r.immatricolazione });
+      if (makeScad) {
+        const data = {
+          entityId: entity.id,
+          entityName: entity.name,
+          kind,
+          type: v.type,
+          label: v.type === 'altro' ? (v.label || r.docName || 'Scadenza') : '',
+          date: v.date,
+          notes: '',
+          docLink: file.webViewLink || '',
+          docName: v.name || file.name,
+        };
+        tasks.push(scad.save(null, data, { calendar: !!v.calendar }).then(({ calError }) => {
+          if (calError) toast(`Scadenza salvata, ma non nel calendario (${drive.explain(calError)})`);
+        }));
+      }
+      Promise.all(tasks)
+        .then(() => {
+          toast(makeScad ? 'Scadenza creata ✓' : 'Fatto ✓');
+          onDone();
+        })
+        .catch((err) => toast(drive.explain(err)));
+    },
+  });
+
+  const form = dlg.querySelector('form');
+  const fields = form.querySelector('[data-scad-fields]');
+  if (fields) {
+    const sync = () => {
+      fields.hidden = !form.elements.makeScad.checked;
+      form.querySelector('[data-label-field]').hidden = form.elements.type.value !== 'altro';
+    };
+    form.addEventListener('change', sync);
+    sync();
+  }
 }
 
 /* ---------- Pagina principale ---------- */
@@ -225,6 +346,11 @@ function home(root) {
       title: 'Documenti',
       actions: drive.available() ? `<button class="icon-btn" type="button" data-refresh aria-label="Aggiorna">${icon('refresh')}</button>` : '',
     })}
+    ${drive.available() ? `
+    <form class="quick-add search" data-search role="search" hidden>
+      <input name="q" type="search" placeholder="Cerca nei documenti, anche nel testo…" autocomplete="off" enterkeyhint="search" aria-label="Cerca nei documenti">
+      <button class="icon-btn" type="submit" aria-label="Cerca">${icon('search')}</button>
+    </form>` : ''}
     <div data-banner></div>
     <div data-body></div>`;
   const $ = (s) => root.querySelector(s);
@@ -239,6 +365,46 @@ function home(root) {
   let error = null;
   let busy = '';
   let alive = true;
+  let results = null; // risultati della ricerca (null = nessuna ricerca)
+  let query = '';
+
+  $('[data-search]')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    query = e.target.elements.q.value.trim();
+    e.target.elements.q.blur();
+    if (!query) {
+      results = null;
+      draw();
+      return;
+    }
+    withPermission(async () => {
+      busy = `Cerco "${query}"…`;
+      error = null;
+      draw();
+      try {
+        results = await drive.search(query);
+      } catch (err) {
+        error = err;
+      }
+      busy = '';
+      draw();
+    });
+  });
+
+  function resultsHtml() {
+    const head = `<h3 class="group-head"><span>🔍 ${results.length === 1 ? '1 documento' : `${results.length} documenti`} per "${esc(query)}"</span><button class="link-btn" type="button" data-clear-search>Chiudi</button></h3>`;
+    if (!results.length) {
+      return `<section class="group">${head}<p class="hint empty-sec">Nessun documento trovato. Prova con un'altra parola. I file appena caricati possono richiedere un po' di tempo prima di essere cercabili nel testo.</p></section>`;
+    }
+    return `<section class="group">${head}<div class="card rows">${results.map((f) => `
+      <div class="row doc-file">
+        <a class="row-main doc-open" href="${esc(f.webViewLink || '#')}" target="_blank" rel="noopener">
+          <div class="row-title"><span class="file-ico">${drive.fileIcon(f)}</span>${esc(f.name)}</div>
+          <div class="row-sub"><span>📁 ${esc(f.path || drive.ROOT_NAME)}</span></div>
+        </a>
+        <a class="icon-btn" href="#/documenti/${esc(f.folderId)}" aria-label="Apri la cartella">${icon('chevron')}</a>
+      </div>`).join('')}</div></section>`;
+  }
 
   async function load() {
     if (!drive.connected() || !drive.config()) return draw();
@@ -274,6 +440,8 @@ function home(root) {
     const cfg = drive.config();
     const data = drive.cachedSections();
     const banners = [];
+    // La ricerca serve solo quando le cartelle sono configurate.
+    $('[data-search]').hidden = !cfg;
     if (busy) banners.push(`<div class="banner">⏳ <span>${esc(busy)}</span></div>`);
     if (error?.code !== 'noroot') banners.push(errorBanner(error));
 
@@ -311,6 +479,11 @@ function home(root) {
     if (!drive.connected()) banners.unshift(staleBanner());
     $('[data-banner]').innerHTML = banners.join('');
 
+    if (results) {
+      $('[data-body]').innerHTML = resultsHtml();
+      return;
+    }
+
     const by = data?.bySection || {};
     let html = scadenzeCard();
     for (const s of drive.SECTIONS) {
@@ -347,6 +520,13 @@ function home(root) {
   }
 
   root.addEventListener('click', (e) => {
+    if (e.target.closest('[data-clear-search]')) {
+      results = null;
+      query = '';
+      $('[data-search]').reset();
+      draw();
+      return;
+    }
     if (e.target.closest('[data-connect]') || e.target.closest('[data-refresh]')) {
       withPermission(load);
       return;
@@ -410,6 +590,7 @@ function folderView(root, id) {
     <div data-banner></div>
     <div data-body></div>
     <input type="file" accept="image/*" capture="environment" data-camera hidden>
+    <input type="file" accept="image/*" capture="environment" data-camera-ocr hidden>
     <input type="file" multiple data-files hidden>
     <button class="fab" type="button" data-fab>${icon('plus')}Aggiungi</button>`;
   const $ = (s) => root.querySelector(s);
@@ -522,22 +703,39 @@ function folderView(root, id) {
     $('[data-body]').innerHTML = html;
   }
 
-  async function doUpload(files, names = []) {
-    let ok = 0;
-    for (const [i, file] of files.entries()) {
-      busy = `Caricamento ${files.length > 1 ? `${i + 1} di ${files.length}` : ''}: ${names[i] || file.name}…`;
-      draw();
+  const setBusy = (msg) => {
+    busy = msg;
+    draw();
+  };
+
+  /** Carica i file (le foto vengono alleggerite). Restituisce i file creati. */
+  async function doUpload(files, names = [], { quiet = false } = {}) {
+    const done = [];
+    for (const [i, original] of files.entries()) {
+      setBusy(`Caricamento ${files.length > 1 ? `${i + 1} di ${files.length}` : ''}: ${names[i] || original.name}…`);
       try {
-        await drive.upload(file, id, names[i] || file.name);
-        ok += 1;
+        const file = await drive.compressPhoto(original);
+        let name = names[i] || original.name;
+        if (file !== original && /\.(png|webp|heic)$/i.test(name)) name = name.replace(/\.\w+$/, '.jpg');
+        done.push(await drive.upload(file, id, name));
       } catch (err) {
         toast(drive.explain(err));
       }
     }
-    busy = '';
-    if (ok) toast(ok === 1 ? 'Documento caricato ✓' : `${ok} documenti caricati ✓`);
+    setBusy('');
+    if (done.length && !quiet) toast(done.length === 1 ? 'Documento caricato ✓' : `${done.length} documenti caricati ✓`);
     load();
+    return done;
   }
+
+  $('[data-camera-ocr]').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const stamp = new Date().toLocaleDateString('it-IT').replace(/\//g, '-');
+    const [uploaded] = await doUpload([file], [`Documento ${stamp}.jpg`], { quiet: true });
+    if (uploaded) readAndPropose(uploaded, id, { isNew: true, onBusy: setBusy, onDone: load });
+  });
 
   $('[data-camera]').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -572,6 +770,7 @@ function folderView(root, id) {
         ] : entity ? [
           { icon: '⏰', label: 'Nuova scadenza', run: () => scadenzaForm(entity, null) },
         ] : [
+          { icon: '🔍', label: 'Fotografa e leggi un documento', run: () => $('[data-camera-ocr]').click() },
           { icon: '📷', label: 'Scatta una foto', run: () => $('[data-camera]').click() },
           { icon: '📄', label: 'Carica un file dal telefono', run: () => $('[data-files]').click() },
         ]),
@@ -610,6 +809,7 @@ function folderView(root, id) {
       if (!f) return;
       menu(f.name, [
         { icon: '👁️', label: 'Apri', run: () => window.open(f.webViewLink, '_blank', 'noopener') },
+        ...(drive.canRead(f) ? [{ icon: '🔍', label: 'Leggi e trova scadenze', run: () => withPermission(() => readAndPropose(f, id, { onBusy: setBusy, onDone: load })) }] : []),
         { icon: '✏️', label: 'Rinomina', run: () => withPermission(() => nameDialog({ title: 'Rinomina documento', value: f.name }, (name) => {
           drive.rename(f.id, name).then(() => { toast('Documento rinominato ✓'); load(); }).catch((err) => toast(drive.explain(err)));
         })) },

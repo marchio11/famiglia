@@ -769,3 +769,9 @@ dialog.sheet h2:focus { outline: none; }
 .switch.cal input { accent-color: var(--c, var(--primary)); }
 .lead .avatar { width: 34px; height: 34px; }
 .lead { font-size: 1.3rem; }
+
+/* ---------- Ricerca e lettura documenti ---------- */
+
+.quick-add.search input { -webkit-appearance: none; appearance: none; }
+.ocr-found { margin: 0 0 6px; font-size: 1.05rem; }
+.doc-file a.icon-btn { color: var(--muted); }
