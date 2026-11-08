@@ -238,9 +238,8 @@ function index(root) {
           <h3 class="group-head"><span>${t.emoji} ${t.name}</span><button class="link-btn" type="button" data-new-type="${t.id}">+ Nuova</button></h3>
           <div class="list-cards">${group.map((l) => {
             const its = items.filter((i) => i.listId === l.id);
-            const open = its.filter((i) => !i.done).length;
             const nSec = (l.sections || []).length;
-            const info = its.length ? `${open} da fare · ${its.length} in tutto` : 'Vuota';
+            const info = its.length ? (its.length === 1 ? '1 voce' : `${its.length} voci`) : 'Vuota';
             return `
               <a class="card list-card" href="#/liste/${l.id}">
                 <span class="emoji">${esc(l.emoji || t.emoji)}</span>

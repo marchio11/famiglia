@@ -223,11 +223,10 @@ function detail(root, id) {
         <h3 class="group-head"><span>📋 Liste</span><button class="link-btn" type="button" data-new-list>+ Nuova lista</button></h3>
         ${lists.length ? `<div class="list-cards">${lists.map((l) => {
           const its = items.filter((i) => i.listId === l.id);
-          const open = its.filter((i) => !i.done).length;
           return `
             <a class="card list-card" href="#/liste/${l.id}">
               <span class="emoji">${esc(l.emoji || '📋')}</span>
-              <span class="grow"><div class="name">${esc(l.name)}</div><div class="info">${its.length ? `${open} da fare · ${its.length} in tutto` : 'Vuota'}</div></span>
+              <span class="grow"><div class="name">${esc(l.name)}</div><div class="info">${its.length ? (its.length === 1 ? '1 voce' : `${its.length} voci`) : 'Vuota'}</div></span>
               ${icon('chevron')}
             </a>`;
         }).join('')}</div>` : '<p class="hint empty-sec">Nessuna lista.</p>'}
