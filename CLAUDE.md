@@ -128,7 +128,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    elimina); "Ripristina le categorie iniziali" toglie gli override.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente già in fase di inserimento).
-2. **To-do** — assegnatari (una, due o tutte e tre le persone; nessuno =
+2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri Tutti/Miei/Fatti) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
    scadenza, priorità.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,

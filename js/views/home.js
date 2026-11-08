@@ -16,7 +16,7 @@ function upcoming() {
   const items = [];
   const me = store.getUser();
 
-  // To-do: quelli in scadenza nei prossimi giorni, più quelli a priorità alta
+  // Da fare (to-do): quelli in scadenza nei prossimi giorni, più quelli a priorità alta
   // (questi ultimi solo per le persone assegnate, o per tutti se è di tutti).
   for (const t of store.getAll('todo')) {
     if (t.done) continue;
@@ -30,7 +30,7 @@ function upcoming() {
     items.push({
       date: t.due || '', // senza data: in cima, con l'etichetta "Priorità alta"
       title: t.title,
-      sub: `${high && t.due ? '🚩 Alta · ' : ''}To-do · ${who}`,
+      sub: `${high && t.due ? '🚩 Alta · ' : ''}Da fare · ${who}`,
       href: '#/todo',
       color: high ? 'var(--danger)' : 'var(--c-todo)',
     });
@@ -110,7 +110,7 @@ function upcoming() {
 
 const TILES = [
   { id: 'spesa', name: 'Spesa', icon: 'cart', color: 'var(--c-spesa)' },
-  { id: 'todo', name: 'To-do', icon: 'todo', color: 'var(--c-todo)' },
+  { id: 'todo', name: 'Da fare', icon: 'todo', color: 'var(--c-todo)' },
   { id: 'liste', name: 'Liste', icon: 'list', color: 'var(--c-liste)' },
   { id: 'calendario', name: 'Calendario', icon: 'calendar', color: 'var(--c-cal)' },
   { id: 'viaggi', name: 'Viaggi', icon: 'plane', color: 'var(--c-viaggi)' },

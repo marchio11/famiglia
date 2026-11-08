@@ -16,6 +16,6 @@
   ],
   "shortcuts": [
     { "name": "Spesa", "url": "./#/spesa", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "To-do", "url": "./#/todo", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Da fare", "url": "./#/todo", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

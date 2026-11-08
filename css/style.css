@@ -919,3 +919,8 @@ dialog.viewer img { max-width: 100%; max-height: 100dvh; object-fit: contain; }
   .row { border-color: rgba(255, 255, 255, .06); }
   .version { color: #6f6a88; }
 }
+
+/* Etichette delle date (es. "Mercoledì", "30 nov") ben leggibili nel tema scuro */
+@media (prefers-color-scheme: dark) {
+  .tag.week { background: rgba(139, 123, 255, .3); color: #ece8ff; }
+}

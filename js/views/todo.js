@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 const COLOR = 'var(--c-todo)';
 const PRIO = { 1: 'Bassa', 2: 'Media', 3: 'Alta' };
 const FILTERS = [
-  { id: 'open', label: 'Da fare' },
+  { id: 'open', label: 'Tutti' },
   { id: 'mine', label: 'Miei' },
   { id: 'done', label: 'Fatti' },
 ];
@@ -90,7 +90,7 @@ function row(t) {
 export default function todo(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ badge: icon('todo'), title: 'To-do', count: ' ' })}
+    ${pageHead({ badge: icon('todo'), title: 'Da fare', count: ' ' })}
     <div class="chips" role="group" aria-label="Filtro" data-filters></div>
     <div data-list></div>
     <button class="fab" type="button" data-new>${icon('plus')}Nuova</button>`;
@@ -145,7 +145,7 @@ export default function todo(root) {
     if (!items.length) {
       const msg = {
         open: all.length ? ['🎉', 'Niente da fare!', 'Goditi il momento… o aggiungi una nuova attività.'] : ['📝', 'Nessuna attività', 'Tocca "Nuova" per aggiungere la prima: puoi scegliere chi se ne occupa, la scadenza e la priorità.'],
-        mine: ['😎', 'Nessuna attività assegnata a te', 'Quelle per "Tutti" le trovi in "Da fare".'],
+        mine: ['😎', 'Nessuna attività assegnata a te', 'Quelle di tutta la famiglia le trovi in "Tutti".'],
         done: ['🗂️', 'Ancora nessuna attività completata', ''],
       }[filter];
       listEl.innerHTML = `<div class="empty-state"><span class="big">${msg[0]}</span><p><strong>${msg[1]}</strong></p><p>${msg[2]}</p></div>`;
