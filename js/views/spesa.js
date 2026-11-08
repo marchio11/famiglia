@@ -114,7 +114,7 @@ function manageCats() {
     cats: allCats().map((c) => ({ id: c.id, label: catLabel(c), locked: c.id === 'altro' })),
     placeholder: 'es. 🐶 Animali',
     reorder: true,
-    hint: 'Con ▲ ▼ cambi l\'ordine delle categorie nella lista (vale per tutta la famiglia). Tocca un nome per cambiarlo, anche l\'emoji iniziale. I prodotti di una categoria eliminata finiscono in "Altro", che non si può eliminare.',
+    hint: 'Tieni premuto ⠿ e trascina per cambiare l\'ordine delle categorie nella lista (vale per tutta la famiglia). Tocca un nome per cambiarlo, anche l\'emoji iniziale. I prodotti di una categoria eliminata finiscono in "Altro", che non si può eliminare.',
     onSave: ({ renamed, deleted, added, order }) => {
       if (order) saveOrder(order);
       for (const r of renamed) {

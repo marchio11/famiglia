@@ -127,10 +127,10 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 1. **Spesa** — lista condivisa, spunta, categorie (predefinite + personalizzate).
    Anche le categorie iniziali si possono rinominare o eliminare (override in
    `spesaCats` con lo stesso id, `hidden: true` se eliminate; "Altro" non si
-   elimina); ordine delle categorie modificabile con le frecce ▲ ▼ (salvato in
+   elimina); ordine delle categorie modificabile trascinando la maniglia ⠿ (pointer events, scorrimento automatico ai bordi) (salvato in
    `config/spesaOrder`, vale per tutti; le nuove categorie vanno prima di
    "Altro"); "Ripristina le categorie iniziali" toglie override e ordine.
-   Le frecce ci sono anche per le categorie interne delle Liste.
+   Il trascinamento c'è anche per le categorie interne delle Liste.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente già in fase di inserimento).
 2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =

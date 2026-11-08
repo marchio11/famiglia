@@ -930,9 +930,28 @@ dialog.viewer img { max-width: 100%; max-height: 100dvh; object-fit: contain; }
   .tag.priv { background: color-mix(in srgb, var(--ev, var(--primary)) 36%, transparent); color: #fff; }
 }
 
-/* Riordino categorie (frecce ▲ ▼) */
-.cat-row .move { display: flex; flex-direction: column; flex: none; }
-.cat-row .move .icon-btn { width: 36px; height: 24px; border-radius: 8px; font-size: .7rem; color: var(--muted); }
-.cat-row .move .icon-btn:active { background: var(--surface-2); color: var(--c, var(--primary)); }
+/* Riordino categorie a trascinamento (maniglia ⠿) */
+.cat-row .grip {
+  flex: none;
+  width: 36px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none; /* il dito trascina la riga invece di scorrere la pagina */
+  border-radius: 10px;
+}
+.cat-row .grip .icon { fill: currentColor; stroke: none; }
+.cat-row { transition: transform .15s; border-radius: var(--radius-sm); }
+.cat-row.dragging {
+  position: relative;
+  z-index: 2;
+  transform: scale(1.03);
+  background: var(--surface-2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .35), 0 0 0 2px var(--c, var(--primary));
+}
+.cat-row.dragging .grip { color: var(--c, var(--primary)); cursor: grabbing; }
+.cat-list.sorting { user-select: none; -webkit-user-select: none; }
 .cat-row.moved input { animation: moved .6s ease-out; }
 @keyframes moved { from { border-color: var(--c, var(--primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--primary)) 30%, transparent); } }

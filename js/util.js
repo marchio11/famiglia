@@ -223,7 +223,7 @@ export function categorySelect({ name, label = 'Categoria', options, selected = 
 export function categoriesDialog({ title, color, cats, hint = '', placeholder = 'Nome della categoria', reorder = false, onSave }) {
   const row = (c) => `
     <div class="cat-row" data-cat="${esc(c.id)}">
-      ${reorder ? `<span class="move"><button type="button" class="icon-btn" data-up aria-label="Sposta su ${esc(c.label)}">▲</button><button type="button" class="icon-btn" data-down aria-label="Sposta giù ${esc(c.label)}">▼</button></span>` : ''}
+      ${reorder ? `<span class="grip" data-grip aria-label="Trascina per spostare ${esc(c.label)}" title="Trascina per spostare">${icon('grip')}</span>` : ''}
       <input name="name:${esc(c.id)}" value="${esc(c.label)}" required aria-label="Nome categoria" autocomplete="off">
       ${c.locked
         ? '<span class="icon-btn locked" title="Non si può eliminare" aria-hidden="true">🔒</span>'
@@ -261,21 +261,6 @@ export function categoriesDialog({ title, color, cats, hint = '', placeholder = 
   const newInput = dlg.querySelector('input[name=new]');
 
   list.addEventListener('click', (e) => {
-    const move = e.target.closest('[data-up], [data-down]');
-    if (move) {
-      const r = move.closest('.cat-row');
-      const up = move.hasAttribute('data-up');
-      const sib = up ? r.previousElementSibling : r.nextElementSibling;
-      if (sib?.dataset.cat) {
-        if (up) sib.before(r);
-        else sib.after(r);
-        r.classList.remove('moved');
-        void r.offsetWidth; // fa ripartire l'evidenziazione
-        r.classList.add('moved');
-        move.focus();
-      }
-      return;
-    }
     const del = e.target.closest('[data-del]');
     if (!del) return;
     const r = del.closest('.cat-row');
@@ -284,6 +269,9 @@ export function categoriesDialog({ title, color, cats, hint = '', placeholder = 
     r.querySelector('input').disabled = on;
     del.setAttribute('aria-label', on ? 'Ripristina' : 'Elimina');
   });
+  // Trascinamento con il dito dalla maniglia ⠿ per cambiare l'ordine.
+  if (reorder) enableDrag(dlg, list);
+
   dlg.querySelector('[data-add-new]').onclick = () => {
     const val = newInput.value.trim();
     if (!val) return newInput.focus();
@@ -297,4 +285,69 @@ export function categoriesDialog({ title, color, cats, hint = '', placeholder = 
     newInput.focus();
   };
   return dlg;
+}
+
+/**
+ * Riordino a trascinamento: si prende la riga dalla maniglia [data-grip] e la
+ * si sposta; vicino ai bordi la finestra scorre da sola.
+ */
+function enableDrag(scroller, list) {
+  let row = null;
+  let y = 0;
+  let raf = 0;
+
+  const rows = () => [...list.querySelectorAll('.cat-row[data-cat]')];
+
+  function place() {
+    const others = rows().filter((r) => r !== row);
+    const target = others.find((r) => {
+      const b = r.getBoundingClientRect();
+      return y < b.top + b.height / 2;
+    });
+    if (target) {
+      if (row.nextElementSibling !== target) target.before(row);
+    } else if (others.length) {
+      const last = others.at(-1);
+      if (last.nextElementSibling !== row) last.after(row);
+    }
+  }
+
+  function tick() {
+    if (!row) return;
+    const box = scroller.getBoundingClientRect();
+    const edge = 70;
+    if (y < box.top + edge) scroller.scrollTop -= Math.ceil((box.top + edge - y) / 3);
+    else if (y > box.bottom - edge) scroller.scrollTop += Math.ceil((y - (box.bottom - edge)) / 3);
+    place();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function end() {
+    if (!row) return;
+    row.classList.remove('dragging');
+    row.classList.add('moved');
+    const r = row;
+    setTimeout(() => r.classList.remove('moved'), 600);
+    row = null;
+    cancelAnimationFrame(raf);
+    list.classList.remove('sorting');
+  }
+
+  list.addEventListener('pointerdown', (e) => {
+    const grip = e.target.closest('[data-grip]');
+    if (!grip) return;
+    e.preventDefault();
+    row = grip.closest('.cat-row');
+    y = e.clientY;
+    grip.setPointerCapture(e.pointerId);
+    row.classList.add('dragging');
+    list.classList.add('sorting');
+    navigator.vibrate?.(12);
+    raf = requestAnimationFrame(tick);
+  });
+  list.addEventListener('pointermove', (e) => {
+    if (row) y = e.clientY;
+  });
+  list.addEventListener('pointerup', end);
+  list.addEventListener('pointercancel', end);
 }
