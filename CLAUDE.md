@@ -109,7 +109,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      assegnate (o per tutti se è di tutti); eventi del calendario entro 7
      giorni (inclusi i privati di chi guarda); prodotti urgenti della spesa
      (inseriti tra le cose di oggi). Massimo 3 voci visibili, le altre si
-     vedono scorrendo dentro il riquadro (con contatore e indicazione).
+     vedono scorrendo dentro il riquadro (contatore + barra di scorrimento
+     disegnata a mano, sempre visibile: quella di Android si nasconde).
    - Parte inferiore: accesso alle sezioni sopra elencate.
 
 ## Account

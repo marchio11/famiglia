@@ -122,8 +122,10 @@ export default function home(root) {
         <h2 id="sum-title">In evidenza</h2>
         <span class="sum-count" data-sum-count></span>
       </header>
-      <div class="sum-list" data-sum-list></div>
-      <div class="sum-hint" data-sum-hint hidden></div>
+      <div class="sum-wrap">
+        <div class="sum-list" data-sum-list></div>
+        <div class="sum-track" data-sum-track hidden><div class="sum-thumb"></div></div>
+      </div>
     </section>
     <h2 class="section-label">Sezioni</h2>
     <nav class="tiles" data-tiles></nav>
@@ -134,25 +136,30 @@ export default function home(root) {
   /** Mostra al massimo SUMMARY_VISIBLE voci: le altre si vedono scorrendo. */
   function fitSummary(scrollTop = 0) {
     const list = $('[data-sum-list]');
-    const hint = $('[data-sum-hint]');
+    const track = $('[data-sum-track]');
+    const thumb = track.firstElementChild;
     const rows = list.querySelectorAll('.sum-row');
     const extra = rows.length - SUMMARY_VISIBLE;
     if (extra <= 0) {
       list.style.maxHeight = '';
       list.classList.remove('scrolls', 'more');
-      hint.hidden = true;
+      track.hidden = true;
       return;
     }
     const last = rows[SUMMARY_VISIBLE - 1];
     list.style.maxHeight = `${last.offsetTop + last.offsetHeight}px`;
     list.classList.add('scrolls');
     list.scrollTop = scrollTop;
+    track.hidden = false;
+    // Barra di scorrimento sempre visibile (quelle di Android si nascondono).
     const update = () => {
-      const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 4;
-      list.classList.toggle('more', !atEnd);
-      hint.hidden = atEnd;
+      const { scrollTop, scrollHeight, clientHeight } = list;
+      const h = Math.max(24, (clientHeight / scrollHeight) * track.clientHeight);
+      const max = scrollHeight - clientHeight;
+      thumb.style.height = `${h}px`;
+      thumb.style.transform = `translateY(${max > 0 ? (scrollTop / max) * (track.clientHeight - h) : 0}px)`;
+      list.classList.toggle('more', scrollTop < max - 4);
     };
-    hint.textContent = extra === 1 ? 'Scorri per vedere l\'altra ↓' : `Scorri per vedere le altre ${extra} ↓`;
     list.onscroll = update;
     update();
   }
