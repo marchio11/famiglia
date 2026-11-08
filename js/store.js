@@ -1,21 +1,31 @@
-// Strato dati dell'app.
+// Strato dati dell'app. Le schermate usano solo queste funzioni.
 //
-// FASE 1: i dati vivono nel localStorage del telefono (non sono condivisi).
-// FASE 2: questo file verrà riscritto per usare Firebase Firestore, mantenendo
-// le stesse funzioni, così le schermate non dovranno cambiare.
+// Due modalità:
+// - LOCALE (firebase-config.js vuoto): dati nel localStorage del telefono.
+// - CLOUD (Fase 2): dati su Firebase Firestore, condivisi in tempo reale tra
+//   i telefoni di famiglia e disponibili anche offline.
 //
-// Ogni "collezione" (spesa, todo, lists, listItems, ...) è una mappa id -> oggetto.
+// Ogni "collezione" (spesa, todo, lists, listItems, spesaMemo) è una mappa
+// id -> oggetto, tenuta in memoria per letture immediate.
+
+import { firebaseConfig } from './firebase-config.js';
+
+export const CLOUD = !!(firebaseConfig && firebaseConfig.apiKey);
+export const COLLECTIONS = ['spesa', 'todo', 'lists', 'listItems', 'spesaMemo'];
+export const MEMBERS = ['Andrea', 'Laura', 'Claudia'];
 
 const KEY = 'cm:data:v1';
 const USER_KEY = 'cm:user';
 
-export const MEMBERS = ['Andrea', 'Laura', 'Claudia'];
-
 const listeners = new Set();
-let data = load();
-let memoryUser = null;
+let data = CLOUD ? {} : loadLocal();
+let cloud = null;
+let currentUser = null;
+let errorHandler = (e) => console.error(e);
 
-function load() {
+/* ---------- Persistenza ---------- */
+
+function loadLocal() {
   try {
     return JSON.parse(localStorage.getItem(KEY)) || {};
   } catch {
@@ -23,18 +33,59 @@ function load() {
   }
 }
 
-function persist() {
+function saveLocal() {
   try {
     localStorage.setItem(KEY, JSON.stringify(data));
   } catch (e) {
     console.error('Salvataggio non riuscito', e);
   }
-  notify();
 }
 
 function notify() {
   listeners.forEach((fn) => fn());
 }
+
+/** Dopo ogni modifica: salva (locale) e aggiorna le schermate. */
+function commit(cloudOp) {
+  if (CLOUD) {
+    cloudOp().catch((e) => errorHandler(e));
+  } else {
+    saveLocal();
+  }
+  notify();
+}
+
+/* ---------- Cloud ---------- */
+
+/** Carica Firebase. Restituisce il modulo per login/logout. */
+export async function loadCloud(onError) {
+  if (onError) errorHandler = onError;
+  cloud = await import('./cloud.js');
+  return cloud;
+}
+
+let stopListening = null;
+
+/** Inizia a ricevere i dati in tempo reale (dopo il login). */
+export function connect() {
+  disconnect();
+  stopListening = cloud.listen(
+    COLLECTIONS,
+    (col, map) => {
+      data[col] = map;
+      notify();
+    },
+    (e) => errorHandler(e),
+  );
+}
+
+export function disconnect() {
+  if (stopListening) stopListening();
+  stopListening = null;
+  data = {};
+}
+
+/* ---------- Lettura ---------- */
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -48,74 +99,83 @@ export function get(col, id) {
   return data[col]?.[id];
 }
 
-export function add(col, obj) {
-  const id = uid();
-  data[col] ??= {};
-  data[col][id] = { ...obj, id, createdBy: getUser(), createdAt: Date.now() };
-  persist();
-  return id;
-}
-
-/** Scrive un oggetto con un id scelto (usato anche per "Annulla"). */
-export function set(col, id, obj) {
-  data[col] ??= {};
-  data[col][id] = { ...obj, id };
-  persist();
-}
-
-export function update(col, id, patch) {
-  const item = data[col]?.[id];
-  if (!item) return;
-  Object.assign(item, patch, { updatedBy: getUser(), updatedAt: Date.now() });
-  persist();
-}
-
-/** Elimina e restituisce le copie eliminate (per poterle ripristinare). */
-export function remove(col, ids) {
-  const list = Array.isArray(ids) ? ids : [ids];
-  const removed = [];
-  for (const id of list) {
-    if (data[col]?.[id]) {
-      removed.push(data[col][id]);
-      delete data[col][id];
-    }
-  }
-  persist();
-  return removed;
-}
-
-export function restore(col, items) {
-  data[col] ??= {};
-  for (const it of items) data[col][it.id] = it;
-  persist();
-}
-
 export function subscribe(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-// Utente corrente (in Fase 2 arriverà dal login Google).
+/* ---------- Scrittura ---------- */
+
+export function add(col, obj) {
+  const id = uid();
+  const item = { ...obj, id, createdBy: getUser(), createdAt: Date.now() };
+  data[col] ??= {};
+  data[col][id] = item;
+  commit(() => cloud.write(col, id, item));
+  return id;
+}
+
+/** Scrive un oggetto con un id scelto. */
+export function set(col, id, obj) {
+  const item = { ...obj, id };
+  data[col] ??= {};
+  data[col][id] = item;
+  commit(() => cloud.write(col, id, item));
+}
+
+export function update(col, id, patch) {
+  const item = data[col]?.[id];
+  if (!item) return;
+  const full = { ...patch, updatedBy: getUser(), updatedAt: Date.now() };
+  Object.assign(item, full);
+  commit(() => cloud.patch(col, id, full));
+}
+
+/** Elimina e restituisce le copie eliminate (per poterle ripristinare). */
+export function remove(col, ids) {
+  const list = (Array.isArray(ids) ? ids : [ids]).filter((id) => data[col]?.[id]);
+  const removed = list.map((id) => data[col][id]);
+  list.forEach((id) => delete data[col][id]);
+  if (list.length) commit(() => cloud.removeMany(col, list));
+  return removed;
+}
+
+/** Ripristina elementi eliminati (tasto "Annulla"). */
+export function restore(col, items) {
+  if (!items.length) return;
+  data[col] ??= {};
+  for (const it of items) data[col][it.id] = it;
+  commit(() => cloud.writeMany(col, items));
+}
+
+/* ---------- Utente ---------- */
+
 export function getUser() {
+  if (currentUser) return currentUser;
+  if (CLOUD) return null;
   try {
-    return localStorage.getItem(USER_KEY) || memoryUser;
+    return localStorage.getItem(USER_KEY);
   } catch {
-    return memoryUser;
+    return null;
   }
 }
 
 export function setUser(name) {
-  memoryUser = name;
-  try {
-    localStorage.setItem(USER_KEY, name);
-  } catch { /* modalità privata: resta in memoria */ }
+  currentUser = name;
+  if (!CLOUD) {
+    try {
+      localStorage.setItem(USER_KEY, name);
+    } catch { /* modalità privata: resta in memoria */ }
+  }
   notify();
 }
 
-// Se l'app è aperta in due schede, le tiene allineate.
-window.addEventListener('storage', (e) => {
-  if (e.key === KEY) {
-    data = load();
-    notify();
-  }
-});
+// In modalità locale, se l'app è aperta in due schede le tiene allineate.
+if (!CLOUD) {
+  window.addEventListener('storage', (e) => {
+    if (e.key === KEY) {
+      data = loadLocal();
+      notify();
+    }
+  });
+}

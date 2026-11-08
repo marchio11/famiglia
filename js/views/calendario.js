@@ -6,7 +6,7 @@ const COLOR = 'var(--c-cal)';
 export default function calendario(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ title: `<span class="badge-icon" style="--c:${COLOR}">${icon('calendar')}</span>Calendario` })}
+    ${pageHead({ badge: icon('calendar'), title: 'Calendario' })}
     <section class="card coming">
       <div class="big">📅</div>
       <h2>In arrivo nella Fase 3</h2>

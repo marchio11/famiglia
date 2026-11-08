@@ -73,7 +73,7 @@ function itemForm(item) {
 
 function index(root) {
   root.innerHTML = `
-    ${pageHead({ title: `<span class="badge-icon" style="--c:${COLOR}">${icon('list')}</span>Liste` })}
+    ${pageHead({ badge: icon('list'), title: 'Liste' })}
     <div data-lists></div>
     <button class="fab" type="button" data-new>${icon('plus')}Nuova lista</button>`;
 

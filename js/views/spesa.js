@@ -47,7 +47,8 @@ export function guessCategory(name) {
 
 /** L'app ricorda la categoria scelta per ogni prodotto. */
 function memoKey(name) {
-  return name.toLowerCase().trim();
+  // Diventa l'id del documento: niente "/" (non ammesso da Firestore).
+  return name.toLowerCase().trim().replace(/\//g, '∕');
 }
 function rememberCategory(name, cat) {
   store.set('spesaMemo', memoKey(name), { name: name.trim(), cat });
@@ -94,7 +95,7 @@ function row(item) {
 export default function spesa(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ title: `<span class="badge-icon" style="--c:${COLOR}">${icon('cart')}</span>Spesa`, count: ' ' })}
+    ${pageHead({ badge: icon('cart'), title: 'Spesa', count: ' ' })}
     <form class="quick-add" data-add>
       <input name="name" list="spesa-sugg" placeholder="Cosa serve? es. latte, pane…" autocomplete="off" enterkeyhint="done" aria-label="Aggiungi prodotto">
       <button class="icon-btn" type="submit" aria-label="Aggiungi">${icon('plus')}</button>

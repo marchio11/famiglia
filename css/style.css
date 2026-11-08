@@ -50,13 +50,15 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* Base 18px invece di 16px: tutto il testo (in rem) cresce in proporzione.
+   Essendo in percentuale, rispetta anche l'ingrandimento testo del browser. */
+html { -webkit-text-size-adjust: 100%; font-size: 112.5%; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
 }
@@ -72,8 +74,8 @@ a { color: inherit; text-decoration: none; }
   min-height: 100dvh;
 }
 
-.icon { width: 22px; height: 22px; flex: none; }
-.icon.sm { width: 16px; height: 16px; }
+.icon { width: 24px; height: 24px; flex: none; }
+.icon.sm { width: 1em; height: 1em; }
 .icon.lg { width: 28px; height: 28px; }
 
 /* ---------- Intestazioni ---------- */
@@ -87,10 +89,10 @@ a { color: inherit; text-decoration: none; }
 }
 .page-head h1 {
   font-size: 1.5rem;
-  margin: 0;
+  margin: 0 0 0 6px;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   min-width: 0;
 }
@@ -130,7 +132,7 @@ a { color: inherit; text-decoration: none; }
   gap: 12px;
   margin: 8px 0 18px;
 }
-.home-head .hello { font-size: 1.6rem; font-weight: 700; margin: 0; }
+.home-head .hello { font-size: 1.45rem; line-height: 1.2; font-weight: 700; margin: 0; }
 .home-head .today { color: var(--muted); margin: 2px 0 0; text-transform: capitalize; }
 .who {
   display: flex;
@@ -221,15 +223,15 @@ a { color: inherit; text-decoration: none; }
 .quick-add input {
   flex: 1;
   min-width: 0;
-  height: 50px;
-  padding: 0 16px;
+  height: 54px;
+  padding: 0 18px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   outline: none;
 }
 .quick-add input:focus { border-color: var(--c, var(--primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--primary)) 20%, transparent); }
-.quick-add .icon-btn { width: 50px; height: 50px; background: var(--c, var(--primary)); color: var(--primary-ink); }
+.quick-add .icon-btn { width: 54px; height: 54px; background: var(--c, var(--primary)); color: var(--primary-ink); }
 
 .group { margin-bottom: 18px; }
 .group-head {
@@ -322,7 +324,7 @@ a { color: inherit; text-decoration: none; }
   font-size: .9rem;
   flex: none;
 }
-.avatar.xs { width: 18px; height: 18px; font-size: .65rem; }
+.avatar.xs { width: 20px; height: 20px; font-size: .65rem; }
 .avatar.lg { width: 48px; height: 48px; font-size: 1.3rem; }
 
 .link-btn {
@@ -523,3 +525,24 @@ dialog.sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: v
 
 .lead { width: 44px; height: 44px; display: grid; place-items: center; color: var(--c); flex: none; }
 dialog.sheet h2:focus { outline: none; }
+
+/* ---------- Schermata di accesso ---------- */
+
+.gate {
+  min-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 24px 8px;
+}
+.gate h1 { margin: 8px 0 0; font-size: 1.6rem; }
+.gate p { margin: 4px 0; max-width: 340px; }
+.gate .big { font-size: 3rem; }
+.gate .btn { margin-top: 20px; }
+.gate-logo { width: 96px; height: 96px; border-radius: 24px; box-shadow: var(--shadow); }
+.google-btn { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border); height: 54px; padding: 0 24px; gap: 12px; }
+.gate-error { color: var(--danger); font-weight: 600; }
+.account-line { margin: -6px 0 14px; }

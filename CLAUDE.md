@@ -35,13 +35,24 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 - `index.html` — punto di ingresso; `manifest.webmanifest` + `sw.js` per la PWA
   (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`.
 - `css/style.css` — grafica (tema chiaro/scuro automatico).
-- `js/store.js` — strato dati. In Fase 1 salva in `localStorage` (dati solo sul
-  telefono); in Fase 2 verrà sostituito da Firestore mantenendo la stessa API
-  (`getAll`, `get`, `add`, `update`, `set`, `remove`, `subscribe`).
-- `js/app.js` — router a hash (`#/spesa`, `#/todo`, `#/liste/<id>` …).
+- `js/store.js` — strato dati con API sincrona (`getAll`, `get`, `add`,
+  `update`, `set`, `remove`, `restore`, `subscribe`). Due modalità:
+  - **locale** se `js/firebase-config.js` è `null` (dati in `localStorage`);
+  - **cloud** se è compilato: cache in memoria alimentata da `onSnapshot` di
+    Firestore, scritture inviate a Firestore senza attendere (offline-first).
+- `js/cloud.js` — Firebase SDK da CDN gstatic (versione fissa 11.10.0, nessun
+  build step): login Google (popup, ripiego su redirect) + Firestore con cache
+  persistente. Collezioni top-level: `spesa`, `todo`, `lists`, `listItems`,
+  `spesaMemo`.
+- `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
+  Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
+- `js/app.js` — avvio (login in modalità cloud) e router a hash
+  (`#/spesa`, `#/todo`, `#/liste/<id>` …).
+- `js/user.js` — nome mostrato nell'app: in cloud si ricava dal nome
+  dell'account Google (se è Andrea/Laura/Claudia), altrimenti si sceglie una
+  volta e si ricorda per quell'account.
 - `js/views/*.js` — una vista per sezione.
-- In Fase 1 l'utente si sceglie da un elenco (Andrea/Laura/Claudia); in Fase 2
-  sarà sostituito dal login Google.
+- Testo base 18px (`html { font-size: 112.5% }`): usare sempre `rem`.
 
 ## Sezioni
 

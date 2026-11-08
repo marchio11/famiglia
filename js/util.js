@@ -170,10 +170,11 @@ export function dateField(name, label, value = '') {
 }
 
 /** Intestazione delle pagine interne. */
-export function pageHead({ title, count = '', back = '#/', actions = '' }) {
+export function pageHead({ title, badge = '', count = '', back = '#/', actions = '' }) {
   return `
     <header class="page-head">
       <a class="icon-btn" href="${back}" aria-label="Indietro">${icon('back')}</a>
+      ${badge ? `<span class="badge-icon">${badge}</span>` : ''}
       <h1><span class="title-text">${title}</span>${count !== '' ? `<span class="count" data-count>${count}</span>` : ''}</h1>
       ${actions}
     </header>`;

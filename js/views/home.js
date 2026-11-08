@@ -54,6 +54,7 @@ function tileInfo(id) {
   }
   if (id === 'liste') {
     const n = store.getAll('lists').length;
+    if (!n) return 'Nessuna lista';
     return n === 1 ? '1 lista' : `${n} liste`;
   }
   if (id === 'calendario') return 'In arrivo';

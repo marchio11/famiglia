@@ -23,7 +23,7 @@ const PREVIEW = [
 export default function documenti(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ title: `<span class="badge-icon" style="--c:${COLOR}">${icon('folder')}</span>Documenti` })}
+    ${pageHead({ badge: icon('folder'), title: 'Documenti' })}
     <section class="card coming">
       <div class="big">🗂️</div>
       <h2>In arrivo nella Fase 4</h2>

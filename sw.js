@@ -1,7 +1,7 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
 // Ricordati di aumentare VERSION a ogni modifica dei file, così i telefoni
 // scaricano la versione nuova.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `casa-${VERSION}`;
 
 const FILES = [
@@ -10,6 +10,8 @@ const FILES = [
   'manifest.webmanifest',
   'css/style.css',
   'js/app.js',
+  'js/cloud.js',
+  'js/firebase-config.js',
   'js/store.js',
   'js/util.js',
   'js/icons.js',
@@ -42,7 +44,25 @@ self.addEventListener('activate', (event) => {
 // aggiorna la copia in background.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // Libreria Firebase: i file hanno la versione nell'indirizzo e non cambiano
+  // mai, quindi basta scaricarli una volta e poi usare la copia salvata.
+  if (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/')) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const cached = await cache.match(req);
+        if (cached) return cached;
+        const res = await fetch(req);
+        if (res.ok) cache.put(req, res.clone());
+        return res;
+      })
+    );
+    return;
+  }
+
+  if (url.origin !== location.origin) return;
 
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {

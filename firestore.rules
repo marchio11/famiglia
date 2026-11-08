@@ -1,0 +1,25 @@
+// Regole di sicurezza del database Firestore di Casa Marchionni.
+//
+// Vanno copiate nella console Firebase: Firestore Database → Regole → Pubblica.
+// Sostituisci i tre indirizzi con gli account Google personali di famiglia.
+// (Gli indirizzi veri restano solo nella console, non in questo repository.)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function famiglia() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+          'email-di-andrea@gmail.com',
+          'email-di-laura@gmail.com',
+          'email-di-claudia@gmail.com'
+        ];
+    }
+
+    match /{document=**} {
+      allow read, write: if famiglia();
+    }
+  }
+}

@@ -79,7 +79,7 @@ function row(t) {
 export default function todo(root) {
   root.style.setProperty('--c', COLOR);
   root.innerHTML = `
-    ${pageHead({ title: `<span class="badge-icon" style="--c:${COLOR}">${icon('todo')}</span>To-do`, count: ' ' })}
+    ${pageHead({ badge: icon('todo'), title: 'To-do', count: ' ' })}
     <div class="chips" role="group" aria-label="Filtro" data-filters></div>
     <div data-list></div>
     <button class="fab" type="button" data-new>${icon('plus')}Nuova</button>`;
