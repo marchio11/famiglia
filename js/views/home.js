@@ -13,13 +13,24 @@ function upcoming() {
   const items = [];
   const me = store.getUser();
 
+  // To-do: quelli in scadenza nei prossimi giorni, più quelli a priorità alta
+  // (questi ultimi solo per le persone assegnate, o per tutti se è di tutti).
   for (const t of store.getAll('todo')) {
-    if (t.done || !t.due) continue;
-    if (daysUntil(t.due) > SUMMARY_DAYS) continue;
+    if (t.done) continue;
     const list = assigneesOf(t);
+    const forAll = !list.length || list.length === store.MEMBERS.length;
+    const soon = !!t.due && daysUntil(t.due) <= SUMMARY_DAYS;
+    const high = t.priority === 3 && (forAll || list.includes(me));
+    if (!soon && !high) continue;
     const names = list.map((m) => (m === me ? 'tu' : m)).sort((a, b) => (a === 'tu' ? -1 : b === 'tu' ? 1 : 0));
-    const who = !list.length || list.length === store.MEMBERS.length ? 'tutti' : names.join(' e ');
-    items.push({ date: t.due, title: t.title, sub: `To-do · ${who}`, href: '#/todo', color: 'var(--c-todo)' });
+    const who = forAll ? 'tutti' : names.join(' e ');
+    items.push({
+      date: t.due || '', // senza data: in cima, con l'etichetta "Priorità alta"
+      title: t.title,
+      sub: `${high ? '🚩 Priorità alta · ' : ''}To-do · ${who}`,
+      href: '#/todo',
+      color: high ? 'var(--danger)' : 'var(--c-todo)',
+    });
   }
 
   for (const it of store.getAll('listItems')) {
@@ -129,7 +140,7 @@ export default function home(root) {
         <a class="sum-row" href="${it.href}" style="--c:${it.color}">
           <span class="dot"></span>
           <span class="txt"><div class="t">${esc(it.title)}</div><div class="s">${esc(it.sub)}</div></span>
-          <span class="tag ${dueClass(it.date)}">${esc(relDate(it.date))}</span>
+          <span class="tag ${it.date ? dueClass(it.date) : 'overdue'}">${esc(it.date ? relDate(it.date) : 'Priorità alta')}</span>
         </a>`;
     }
     if (urgent.length) {

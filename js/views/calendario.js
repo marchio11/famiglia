@@ -263,8 +263,20 @@ export default function calendario(root) {
     if (!gcal.connected()) {
       banner.push(`<button class="banner" type="button" data-connect>${icon('refresh', 'sm')}<span>Calendario non aggiornato. <b>Tocca per aggiornare</b></span></button>`);
     }
-    if (error) {
-      banner.push(`<div class="banner warn">⚠️ <span>${esc(gcal.explain(error))}</span></div>`);
+    if (error?.code === 'disabled') {
+      banner.push(`
+        <div class="banner warn column">
+          <span>⚠️ Google risponde che l'<b>API Google Calendar</b> non è attiva nel progetto dell'app.</span>
+          <span>Apri la pagina qui sotto <b>con l'account di famiglia</b>: è già impostata sul progetto giusto. Premi <b>Abilita</b>, aspetta un paio di minuti, poi torna qui e tocca ${icon('refresh', 'sm')}.</span>
+          <a class="btn primary" href="${esc(gcal.enableApiUrl(error))}" target="_blank" rel="noopener">Apri la pagina di attivazione</a>
+          <small>Dettaglio tecnico: ${esc(error.message)}</small>
+        </div>`);
+    } else if (error) {
+      banner.push(`
+        <div class="banner warn column">
+          <span>⚠️ ${esc(gcal.explain(error))}</span>
+          ${error.message && error.message !== gcal.explain(error) ? `<small>Dettaglio tecnico: ${esc(error.message)}</small>` : ''}
+        </div>`);
     }
     if (data?.familyMissing) {
       banner.push(`<div class="banner warn">👨‍👩‍👧 <span>Non trovo il calendario <b>"${gcal.FAMILY_NAME}"</b> nel tuo account Google: controlla di aver accettato l'invito di condivisione. Per ora vedi solo i tuoi eventi personali.</span></div>`);
@@ -272,7 +284,12 @@ export default function calendario(root) {
     if (loading) banner.push('<div class="banner">⏳ <span>Aggiornamento…</span></div>');
     $('[data-banner]').innerHTML = banner.join('');
 
-    const events = data?.events || [];
+    if (!data) {
+      // Nessun evento ancora scaricato (es. errore al primo collegamento).
+      $('[data-agenda]').innerHTML = '';
+      return;
+    }
+    const events = data.events || [];
     $('[data-agenda]').innerHTML = agenda(events)
       + (data ? `<button class="btn ghost more" type="button" data-more>Mostra i mesi successivi</button>
          <p class="hint center">Aggiornato ${new Date(data.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>` : '');

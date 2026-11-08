@@ -657,3 +657,6 @@ dialog.sheet h2:focus { outline: none; }
 .hint.center { text-align: center; }
 .coming .btn { margin-top: 12px; }
 .row.ev.over { opacity: .55; }
+.banner.column { flex-direction: column; gap: 8px; }
+.banner.column small { color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
+.banner.column .btn { align-self: flex-start; height: 44px; text-decoration: none; }

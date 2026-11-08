@@ -11,6 +11,7 @@
 import * as store from './store.js';
 import { getAccount } from './user.js';
 import { ymd } from './util.js';
+import { firebaseConfig } from './firebase-config.js';
 
 const API = 'https://www.googleapis.com/calendar/v3';
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome';
@@ -303,6 +304,13 @@ export function toForm(ev) {
     reminder,
     repeat: '',
   };
+}
+
+/** Pagina della console Google per attivare l'API Calendar nel progetto giusto. */
+export function enableApiUrl(err) {
+  const num = String(err?.message || '').match(/project (\d+)/)?.[1];
+  const project = num || firebaseConfig?.projectId || '';
+  return `https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=${project}`;
 }
 
 /** Messaggio comprensibile per un errore. */
