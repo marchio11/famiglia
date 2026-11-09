@@ -10,7 +10,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 
 - Web app installabile (PWA), usata soprattutto su Android, compatibile con iPhone
   (al momento usiamo tutti dispositivi Android).
-- Pubblicata gratis su Firebase Hosting (prima GitHub Pages).
+- Pubblicata gratis su Firebase Hosting (`https://casa-marchionni.web.app`).
 - Firebase (piano gratuito) per sincronizzazione in tempo reale, oppure
   un'alternativa altrettanto valida (servizi Google? da approfondire).
   Requisiti: uso offline e login con Google.
@@ -24,7 +24,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 - Pubblicazione: **Firebase Hosting** (`https://casa-marchionni.web.app`),
   gratis nel piano Spark. Prima era GitHub Pages, abbandonato dopo la
   sospensione dell'account GitHub (novembre 2026). `firebase.json` +
-  `.firebaserc` nel repo; si pubblica da un computer con
+  `.firebaserc` nel repo. Di norma la pubblicazione è automatica (vedi
+  sotto); a mano, da un computer, con
   `npx firebase-tools deploy --only hosting` (MAI senza `--only hosting`:
   `firestore.rules` nel repo è solo un modello con email finte). Istruzioni
   passo passo in `PUBBLICARE-SU-FIREBASE.txt`. Il dominio web.app è già
@@ -33,23 +34,24 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   Firebase a ogni push sul branch (serve il secret
   `FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI`, creato con
   `npx.cmd firebase-tools init hosting:github`; senza secret il passo viene
-  saltato). GitHub Pages (account riattivato) resta solo come "cartello di
-  trasloco": su *.github.io la home mostra l'avviso con il link al nuovo
-  indirizzo; da spegnere quando tutti hanno la nuova app.
+  saltato). Quindi: push sul branch = app aggiornata in ~2 minuti.
+  GitHub Pages è stato spento (novembre 2026) dopo il passaggio di tutti alla
+  nuova app; GitHub resta come archivio del codice e motore degli
+  aggiornamenti.
 - Dati condivisi (Fase 2): **Firebase Firestore** sul piano gratuito **Spark**
   (tempo reale, offline integrato) + **Firebase Authentication** con Google.
 - File dei documenti (Fase 4): **Google Drive** dell'account di famiglia
   (Firebase Storage gratuito oggi richiede la fatturazione attiva → escluso).
 - Calendario (Fase 3): **Google Calendar API** sul calendario "Famiglia".
 - Codice: HTML/CSS/JavaScript puro (moduli ES), **nessun build step**, così
-  GitHub Pages pubblica direttamente i file del repo.
+  i file del repo vengono pubblicati così come sono.
 
 ### Struttura del codice
 
 - `index.html` — punto di ingresso; `manifest.webmanifest` + `sw.js` per la PWA
   (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`:
   il numero compare in fondo alla home ("versione N"). Il service worker
-  scarica i file con `cache: 'reload'` (GitHub Pages aveva max-age 10 min; su Firebase Hosting i file js/css/html sono no-cache), l'app
+  scarica i file con `cache: 'reload'` (su Firebase Hosting i file js/css/html sono no-cache), l'app
   controlla aggiornamenti quando torna in primo piano e si ricarica da sola.
 - `css/style.css` — grafica (tema chiaro/scuro automatico). Stile "Vivace"
   (scelto dalla famiglia, che usa il tema scuro): riquadri della home pieni di
