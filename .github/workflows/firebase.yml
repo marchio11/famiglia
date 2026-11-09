@@ -1,0 +1,31 @@
+# Pubblica l'app su Firebase Hosting (https://casa-marchionni.web.app)
+# ogni volta che arrivano modifiche su GitHub.
+#
+# Serve il "secret" FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI, creato una volta
+# sola dal computer con:  npx.cmd firebase-tools init hosting:github
+# Finché il secret non c'è, la pubblicazione viene semplicemente saltata.
+name: Pubblica su Firebase
+
+on:
+  push:
+    branches: [claude/youthful-gauss-8ba1wl]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pubblicazione su Firebase Hosting
+        if: env.SA != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI }}
+          channelId: live
+          projectId: casa-marchionni
+      - name: Pubblicazione saltata
+        if: env.SA == ''
+        run: echo "Manca il secret FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI: pubblicazione saltata."

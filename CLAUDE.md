@@ -10,7 +10,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 
 - Web app installabile (PWA), usata soprattutto su Android, compatibile con iPhone
   (al momento usiamo tutti dispositivi Android).
-- Pubblicata gratis su GitHub Pages.
+- Pubblicata gratis su Firebase Hosting (prima GitHub Pages).
 - Firebase (piano gratuito) per sincronizzazione in tempo reale, oppure
   un'alternativa altrettanto valida (servizi Google? da approfondire).
   Requisiti: uso offline e login con Google.
@@ -29,6 +29,13 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   `firestore.rules` nel repo è solo un modello con email finte). Istruzioni
   passo passo in `PUBBLICARE-SU-FIREBASE.txt`. Il dominio web.app è già
   autorizzato in automatico per il login Firebase.
+  Pubblicazione automatica: `.github/workflows/firebase.yml` pubblica su
+  Firebase a ogni push sul branch (serve il secret
+  `FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI`, creato con
+  `npx.cmd firebase-tools init hosting:github`; senza secret il passo viene
+  saltato). GitHub Pages (account riattivato) resta solo come "cartello di
+  trasloco": su *.github.io la home mostra l'avviso con il link al nuovo
+  indirizzo; da spegnere quando tutti hanno la nuova app.
 - Dati condivisi (Fase 2): **Firebase Firestore** sul piano gratuito **Spark**
   (tempo reale, offline integrato) + **Firebase Authentication** con Google.
 - File dei documenti (Fase 4): **Google Drive** dell'account di famiglia

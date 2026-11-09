@@ -8,6 +8,11 @@ import { pickUser } from '../user.js';
 import { assigneesOf } from './todo.js';
 
 const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
+// L'app si è trasferita su Firebase Hosting: chi usa ancora il vecchio
+// indirizzo (GitHub Pages) vede un avviso con il collegamento a quello nuovo.
+const NEW_URL = 'https://casa-marchionni.web.app/';
+const MOVED = location.hostname.endsWith('github.io');
+
 const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
 const SCAD_DAYS = 30; // le scadenze dei documenti compaiono un mese prima
 
@@ -169,6 +174,11 @@ export default function home(root) {
       </div>
       <button class="who" type="button" data-who aria-label="Cambia utente"></button>
     </header>
+    ${MOVED ? `
+    <a class="moved-banner" href="${NEW_URL}" target="_blank" rel="noopener">
+      <span class="big">📦</span>
+      <span><b>L'app ha un nuovo indirizzo!</b><br>Tocca qui per aprire la nuova versione e installala (menu ⋮ → Installa app). Ritroverai tutti i dati. Poi puoi disinstallare questa.</span>
+    </a>` : ''}
     <section class="summary card" aria-labelledby="sum-title">
       <header class="sum-head">
         <span class="sum-badge">${icon('bell')}</span>
