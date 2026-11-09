@@ -1,0 +1,36 @@
+CASA MARCHIONNI - COME PUBBLICARE L'APP SU FIREBASE HOSTING
+============================================================
+
+Serve un computer (Windows o Mac). Si fa una volta; poi, per ogni
+aggiornamento, bastano i passi 5 e 6.
+
+1) Installa Node.js
+   - Vai su https://nodejs.org e scarica la versione "LTS".
+   - Installala lasciando tutte le opzioni come sono (Avanti, Avanti...).
+
+2) Estrai questo archivio in una cartella, per esempio:
+   Documenti\casa-marchionni
+
+3) Apri il terminale DENTRO quella cartella
+   - Windows: apri la cartella, clicca sulla barra dell'indirizzo in alto,
+     scrivi  cmd  e premi Invio.
+   - Mac: tasto destro sulla cartella > "Nuovo terminale nella cartella".
+
+4) Accedi a Firebase (solo la prima volta). Scrivi e premi Invio:
+       npx firebase-tools login
+   - Se chiede di installare "firebase-tools", rispondi  y  e Invio.
+   - Se chiede di inviare statistiche anonime, rispondi  n  e Invio.
+   - Si apre il browser: entra con l'account che possiede il progetto
+     (casamarchionni@proton.me, oppure quello di Andrea se è proprietario)
+     e premi "Consenti".
+
+5) Pubblica l'app. Scrivi e premi Invio:
+       npx firebase-tools deploy --only hosting
+   Alla fine compare:  Hosting URL: https://casa-marchionni.web.app
+
+6) Apri https://casa-marchionni.web.app sul telefono con Chrome,
+   menu > "Installa app", entra con Google: ritrovi tutti i dati.
+
+IMPORTANTE: usa sempre "--only hosting". Così non vengono toccate le
+regole di sicurezza del database, che restano quelle impostate nella
+console Firebase.

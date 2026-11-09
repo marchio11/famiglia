@@ -21,7 +21,14 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 
 - **Vincolo assoluto: solo servizi gratuiti**, utilizzabili senza carta di
   credito e senza rischio di addebiti.
-- Pubblicazione: **GitHub Pages**.
+- Pubblicazione: **Firebase Hosting** (`https://casa-marchionni.web.app`),
+  gratis nel piano Spark. Prima era GitHub Pages, abbandonato dopo la
+  sospensione dell'account GitHub (novembre 2026). `firebase.json` +
+  `.firebaserc` nel repo; si pubblica da un computer con
+  `npx firebase-tools deploy --only hosting` (MAI senza `--only hosting`:
+  `firestore.rules` nel repo è solo un modello con email finte). Istruzioni
+  passo passo in `PUBBLICARE-SU-FIREBASE.txt`. Il dominio web.app è già
+  autorizzato in automatico per il login Firebase.
 - Dati condivisi (Fase 2): **Firebase Firestore** sul piano gratuito **Spark**
   (tempo reale, offline integrato) + **Firebase Authentication** con Google.
 - File dei documenti (Fase 4): **Google Drive** dell'account di famiglia
@@ -35,7 +42,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 - `index.html` — punto di ingresso; `manifest.webmanifest` + `sw.js` per la PWA
   (offline). Ogni volta che si modificano i file, aumentare `VERSION` in `sw.js`:
   il numero compare in fondo alla home ("versione N"). Il service worker
-  scarica i file con `cache: 'reload'` (GitHub Pages ha max-age 10 min), l'app
+  scarica i file con `cache: 'reload'` (GitHub Pages aveva max-age 10 min; su Firebase Hosting i file js/css/html sono no-cache), l'app
   controlla aggiornamenti quando torna in primo piano e si ricarica da sola.
 - `css/style.css` — grafica (tema chiaro/scuro automatico). Stile "Vivace"
   (scelto dalla famiglia, che usa il tema scuro): riquadri della home pieni di
