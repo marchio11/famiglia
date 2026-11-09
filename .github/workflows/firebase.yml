@@ -28,4 +28,4 @@ jobs:
           projectId: casa-marchionni
       - name: Pubblicazione saltata
         if: env.SA == ''
-        run: echo "Manca il secret FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI: pubblicazione saltata."
+        run: echo 'Manca il secret FIREBASE_SERVICE_ACCOUNT_CASA_MARCHIONNI, pubblicazione saltata.'
