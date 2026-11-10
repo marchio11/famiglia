@@ -459,3 +459,17 @@ export async function shoppingFolder() {
   store.update('config', 'drive', { sections: { ...c.sections, spesa: f.id } });
   return f.id;
 }
+
+/* ---------- Backup automatico ---------- */
+
+/** Cartella "Backup app" dentro "Casa Marchionni" (creata la prima volta). */
+export async function backupFolder() {
+  const c = config();
+  if (c.sections.backup) return c.sections.backup;
+  const f = await ensureFolder('Backup app', c.rootId);
+  store.update('config', 'drive', { sections: { ...c.sections, backup: f.id } });
+  return f.id;
+}
+
+/** File (non cartelle, non nel cestino) dentro una cartella. */
+export const filesIn = (folderId) => list(`'${folderId}' in parents and mimeType != '${FOLDER}' and trashed = false`);

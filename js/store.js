@@ -89,8 +89,9 @@ export function connect(uid) {
   const byPath = Object.fromEntries(names.map((n) => [pathOf(n), n]));
   stopListening = cloud.listen(
     names.map(pathOf),
-    (path, map) => {
+    (path, map, fromCache) => {
       data[byPath[path]] = map;
+      if (!fromCache) received.add(byPath[path]);
       notify();
     },
     (e) => errorHandler(e),
@@ -101,7 +102,15 @@ export function disconnect() {
   if (stopListening) stopListening();
   stopListening = null;
   data = {};
+  received.clear();
 }
+
+/**
+ * true quando tutte le collezioni sono arrivate dal server (non solo dalla
+ * copia sul telefono): serve, per esempio, per non fare backup incompleti.
+ */
+const received = new Set();
+export const synced = () => !CLOUD || [...COLLECTIONS, ...Object.keys(PRIVATE)].every((c) => received.has(c));
 
 /* ---------- Lettura ---------- */
 

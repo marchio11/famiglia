@@ -5,6 +5,7 @@ import * as gcal from './gcal.js';
 import * as google from './google.js';
 import * as photos from './photos.js';
 import * as novita from './novita.js';
+import * as backup from './backup.js';
 import home from './views/home.js';
 import spesa from './views/spesa.js';
 import todo from './views/todo.js';
@@ -156,6 +157,7 @@ async function bootCloud() {
 }
 
 google.onChange(() => photos.processQueue());
+backup.start();
 
 if (store.CLOUD) {
   bootCloud();

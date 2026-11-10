@@ -129,6 +129,16 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   ~10 KB come data URL). Eliminando il prodotto la foto va nel cestino di
   Drive dopo 8 s (tasto "Annulla"), tramite una coda in localStorage
   (`cm:photoDeletes`) eseguita quando c'è il permesso Google.
+- `js/backup.js` — backup automatico giornaliero di Firestore su Drive: il
+  primo telefono che apre l'app nel giorno, con permesso Google attivo e dati
+  arrivati dal server (`store.synced()`), salva `backup-AAAA-MM-GG.json` in
+  `Casa Marchionni/Backup app` (id in `config/drive.sections.backup`) con
+  tutte le collezioni, comprese le liste private di chi lo fa
+  (`privLists`/`privItems`, scelta della famiglia). Data dell'ultimo backup in
+  `config/backup` ({lastDay, by}), così si fa una volta al giorno per tutti.
+  Si tengono le ultime 30 copie (le altre nel cestino di Drive). Niente
+  ripristino dall'app: in caso di bisogno si legge il JSON (struttura
+  `collections.<nome>.<id>`) e si reinseriscono i dati a mano/con uno script.
 - `js/novita.js` — note di rilascio: finestra "Novità" mostrata una volta per
   telefono dopo un aggiornamento (`RELEASE` = numero di versione) e link
   "✨ Novità" in fondo alla home. Aggiungere una voce in `NOTES` quando si
