@@ -1016,3 +1016,5 @@ dialog.news .news-head p { margin: 2px 0 0; color: var(--muted); font-size: .85r
 .news-emoji { font-size: 1.6rem; line-height: 1.2; }
 .news-sign { text-align: center; color: var(--muted); font-size: .85rem; margin: 16px 0 0; }
 dialog.news h2:focus { outline: none; }
+.photo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.photo-btn { height: 44px; padding: 0 14px; }

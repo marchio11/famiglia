@@ -162,7 +162,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    "Altro"); "Ripristina le categorie iniziali" toglie override e ordine.
    Il trascinamento c'è anche per le categorie interne delle Liste.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
-   (categoria, quantità, urgente, **foto** già in fase di inserimento).
+   (categoria, quantità, urgente, **foto** già in fase di inserimento: "Scatta"
+   apre direttamente la fotocamera con `capture="environment"`, "Galleria" le
+   foto del telefono).
 2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
    scadenza, priorità.

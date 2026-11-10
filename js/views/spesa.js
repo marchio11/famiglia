@@ -238,7 +238,10 @@ function photoField(it) {
       <span>Foto (facoltativa)</span>
       <div class="photo-pick">
         <span class="photo-preview" data-photo-preview>${it.thumb ? `<img src="${esc(it.thumb)}" alt="">` : '📷'}</span>
-        <label class="btn ghost photo-btn">${it.photoId ? 'Cambia foto' : 'Aggiungi foto'}<input type="file" accept="image/*" data-photo-input hidden></label>
+        <span class="photo-btns">
+          <label class="btn ghost photo-btn">📷 Scatta<input type="file" accept="image/*" capture="environment" data-photo-input hidden></label>
+          <label class="btn ghost photo-btn">🖼️ Galleria<input type="file" accept="image/*" data-photo-input hidden></label>
+        </span>
         ${it.photoId ? '<button type="button" class="link-btn photo-remove" data-photo-remove>Togli</button>' : ''}
       </div>
       <p class="hint">Così chi va a fare la spesa sa esattamente cosa prendere. La foto finisce su Google Drive, nella cartella "Lista della spesa", e viene eliminata insieme al prodotto.</p>
@@ -285,13 +288,15 @@ function itemForm(item, prefill = '') {
   let picked = null;
   let removePhoto = false;
   const form0 = dlg.querySelector('form');
-  form0.querySelector('[data-photo-input]')?.addEventListener('change', (e) => {
+  // "Scatta" apre direttamente la fotocamera, "Galleria" le foto del telefono.
+  form0.querySelectorAll('[data-photo-input]').forEach((input) => input.addEventListener('change', (e) => {
     picked = e.target.files[0] || null;
+    e.target.value = '';
     if (!picked) return;
     removePhoto = false;
     const url = URL.createObjectURL(picked);
     form0.querySelector('[data-photo-preview]').innerHTML = `<img src="${url}" alt="">`;
-  });
+  }));
   form0.querySelector('[data-photo-remove]')?.addEventListener('click', (e) => {
     picked = null;
     removePhoto = true;
