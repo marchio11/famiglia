@@ -1,6 +1,9 @@
 import * as store from '../store.js';
 import { esc, byWho, toast, formDialog, pageHead, categorySelect, categoriesDialog, splitEmoji } from '../util.js';
 import { icon } from '../icons.js';
+import * as google from '../google.js';
+import * as drive from '../drive.js';
+import * as photos from '../photos.js';
 
 const COLOR = 'var(--c-spesa)';
 
@@ -188,6 +191,60 @@ function addProduct({ name, qty = '', cat, urgent = false }, { detailed = false 
   return id;
 }
 
+/* ---------- Foto dei prodotti ---------- */
+
+/** Elimina prodotti (con le loro foto, dopo il tempo per "Annulla"). */
+function removeProducts(ids, message) {
+  const removed = store.remove('spesa', ids);
+  removed.forEach(photos.scheduleDelete);
+  toast(message(removed), {
+    label: 'Annulla',
+    run: () => {
+      store.restore('spesa', removed);
+      removed.forEach(photos.cancelDelete);
+    },
+  });
+}
+
+/** Carica la foto scelta e la collega al prodotto (sostituisce quella vecchia). */
+async function attachPhoto(id, file) {
+  const item = store.get('spesa', id);
+  if (!item) return;
+  try {
+    if (!google.connected()) await google.connect();
+    if (!drive.config()) {
+      toast('Per le foto serve prima preparare le cartelle nella sezione Documenti');
+      return;
+    }
+    toast('Carico la foto… 📷');
+    const fields = await photos.upload(file, item.name);
+    const old = store.get('spesa', id);
+    if (!old) { // eliminato nel frattempo
+      photos.scheduleDelete(fields);
+      return;
+    }
+    if (old.photoId) photos.scheduleDelete(old);
+    store.update('spesa', id, fields);
+    toast('Foto salvata ✓');
+  } catch (err) {
+    const msg = google.explain(err);
+    if (msg) toast(`Foto non salvata: ${msg}`);
+  }
+}
+
+function photoField(it) {
+  return `
+    <div class="field">
+      <span>Foto (facoltativa)</span>
+      <div class="photo-pick">
+        <span class="photo-preview" data-photo-preview>${it.thumb ? `<img src="${esc(it.thumb)}" alt="">` : '📷'}</span>
+        <label class="btn ghost photo-btn">${it.photoId ? 'Cambia foto' : 'Aggiungi foto'}<input type="file" accept="image/*" data-photo-input hidden></label>
+        ${it.photoId ? '<button type="button" class="link-btn photo-remove" data-photo-remove>Togli</button>' : ''}
+      </div>
+      <p class="hint">Così chi va a fare la spesa sa esattamente cosa prendere. La foto finisce su Google Drive, nella cartella "Lista della spesa", e viene eliminata insieme al prodotto.</p>
+    </div>`;
+}
+
 /** Finestra completa: nuovo prodotto (item = null) o modifica. */
 function itemForm(item, prefill = '') {
   const isNew = !item;
@@ -202,21 +259,44 @@ function itemForm(item, prefill = '') {
       <label class="field"><span>Prodotto</span><input name="name" required value="${esc(it.name)}" placeholder="es. Latte" autocomplete="off"></label>
       <label class="field"><span>Quantità o note</span><input name="qty" placeholder="es. 2 confezioni, quello senza lattosio…" value="${esc(it.qty)}"></label>
       ${categorySelect({ name: 'cat', options: allCats().map((c) => ({ value: c.id, label: catLabel(c) })), selected: cat, placeholder: 'es. 🐶 Animali' })}
-      <label class="switch"><input type="checkbox" name="urgent" ${it.urgent ? 'checked' : ''}> Urgente (compare nella home)</label>`,
+      <label class="switch"><input type="checkbox" name="urgent" ${it.urgent ? 'checked' : ''}> Urgente (compare nella home)</label>
+      ${google.available() ? photoField(it) : ''}`,
     onSubmit: (v) => {
       const catId = v.cat === '__new__' ? createCat(v.catNew) : v.cat;
       const data = { name: v.name.replace(/\s+/g, ' '), qty: v.qty, cat: catId, urgent: !!v.urgent };
+      let id = item?.id;
       if (isNew) {
-        addProduct(data, { detailed: true });
+        id = addProduct(data, { detailed: true });
       } else {
         store.update('spesa', item.id, data);
         rememberCategory(data.name, catId);
       }
+      if (removePhoto && !picked && item?.photoId) {
+        photos.scheduleDelete(item);
+        store.update('spesa', item.id, { photoId: '', photoLink: '', photoFolder: '', thumb: '' });
+      }
+      // La foto si carica dopo (il permesso Google, se serve, si chiede qui: è un tocco).
+      if (picked && id) attachPhoto(id, picked);
     },
-    onDelete: isNew ? null : () => {
-      const removed = store.remove('spesa', item.id);
-      toast(`"${item.name}" eliminato`, { label: 'Annulla', run: () => store.restore('spesa', removed) });
-    },
+    onDelete: isNew ? null : () => removeProducts([item.id], () => `"${item.name}" eliminato`),
+  });
+
+  // Foto: anteprima della foto scelta, o "Togli".
+  let picked = null;
+  let removePhoto = false;
+  const form0 = dlg.querySelector('form');
+  form0.querySelector('[data-photo-input]')?.addEventListener('change', (e) => {
+    picked = e.target.files[0] || null;
+    if (!picked) return;
+    removePhoto = false;
+    const url = URL.createObjectURL(picked);
+    form0.querySelector('[data-photo-preview]').innerHTML = `<img src="${url}" alt="">`;
+  });
+  form0.querySelector('[data-photo-remove]')?.addEventListener('click', (e) => {
+    picked = null;
+    removePhoto = true;
+    form0.querySelector('[data-photo-preview]').textContent = '📷';
+    e.currentTarget.remove();
   });
 
   // Nuovo prodotto: la categoria si aggiorna mentre scrivi, finché non la scegli a mano.
@@ -241,6 +321,7 @@ function row(item) {
         <div class="row-title">${esc(item.name)} ${item.urgent && !item.done ? '<span class="tag urgent">Urgente</span>' : ''}</div>
         <div class="row-sub">${sub}</div>
       </div>
+      ${item.thumb ? `<button class="thumb" type="button" data-act="photo" aria-label="Vedi la foto di ${esc(item.name)}"><img src="${esc(item.thumb)}" alt=""></button>` : ''}
     </div>`;
 }
 
@@ -291,8 +372,7 @@ export default function spesa(root) {
   listEl.addEventListener('click', (e) => {
     if (e.target.closest('[data-clear]')) {
       const done = store.getAll('spesa').filter((i) => i.done);
-      const removed = store.remove('spesa', done.map((i) => i.id));
-      toast(`${removed.length} prodotti tolti dal carrello`, { label: 'Annulla', run: () => store.restore('spesa', removed) });
+      removeProducts(done.map((i) => i.id), (r) => `${r.length} prodotti tolti dal carrello`);
       return;
     }
     const act = e.target.closest('[data-act]');
@@ -302,6 +382,7 @@ export default function spesa(root) {
     if (!item) return;
     if (act.dataset.act === 'toggle') store.update('spesa', item.id, { done: !item.done, doneAt: Date.now() });
     if (act.dataset.act === 'edit') itemForm(item);
+    if (act.dataset.act === 'photo' && item.photoLink) window.open(item.photoLink, '_blank', 'noopener');
   });
 
   const draw = () => {

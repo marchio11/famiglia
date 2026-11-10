@@ -120,7 +120,21 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   "casa-offline", elenco in localStorage `cm:offline`): si aprono senza rete
   (foto nel visualizzatore interno, PDF con il visualizzatore del telefono).
   Il service worker cancella solo le cache `casa-vN`, mai "casa-offline".
-- `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email).
+- Collezioni **private** (`store.PRIVATE`): `privLists`/`privItems` → nel
+  database `users/<uid>/lists` e `users/<uid>/listItems`, leggibili solo dal
+  proprietario (regole). `store.connect(uid)` le aggiunge all'ascolto.
+- `js/photos.js` — foto dei prodotti della spesa: caricate (ridotte a 1600 px)
+  in `Casa Marchionni/Lista della spesa` (id in `config/drive.sections.spesa`);
+  nel prodotto `photoId`, `photoLink`, `photoFolder`, `thumb` (anteprima
+  ~10 KB come data URL). Eliminando il prodotto la foto va nel cestino di
+  Drive dopo 8 s (tasto "Annulla"), tramite una coda in localStorage
+  (`cm:photoDeletes`) eseguita quando c'è il permesso Google.
+- `js/novita.js` — note di rilascio: finestra "Novità" mostrata una volta per
+  telefono dopo un aggiornamento (`RELEASE` = numero di versione) e link
+  "✨ Novità" in fondo alla home. Aggiungere una voce in `NOTES` quando si
+  pubblicano novità per la famiglia.
+- `firestore.rules` — modello delle regole (accesso solo ai 3 indirizzi email;
+  `users/{uid}/…` solo al proprietario).
   Gli indirizzi veri vanno solo nella console Firebase, non nel repo.
 - `js/app.js` — avvio (login in modalità cloud) e router a hash
   (`#/spesa`, `#/todo`, `#/liste/<id>`, `#/documenti/<folderId>` …). A ogni
@@ -148,13 +162,15 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    "Altro"); "Ripristina le categorie iniziali" toglie override e ordine.
    Il trascinamento c'è anche per le categorie interne delle Liste.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
-   (categoria, quantità, urgente già in fase di inserimento).
+   (categoria, quantità, urgente, **foto** già in fase di inserimento).
 2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
    scadenza, priorità.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
    Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
-   Cinesi…). I luoghi hanno indirizzo con link a Google Maps.
+   Cinesi…). I luoghi hanno indirizzo con link a Google Maps. Liste
+   **private** (🔒, solo per chi le crea; si può passare da condivisa a privata
+   e viceversa da "Modifica lista": lista e voci vengono spostate).
 4. **Calendario** — Google Calendar condiviso "Famiglia".
    - Schermata: riquadro "Prossimi impegni" (3 eventi) + griglia del mese
      (lunedì-domenica, pallini colorati: arancione Famiglia, colore della
@@ -183,6 +199,9 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - Veicoli: Toyota Yaris, Hyundai i10, Camper (+ nuovi dall'app).
    - Immobili: una cartella per ogni immobile.
    - Animali: Tokyo (il cane).
+   - File ordinabili (Più recenti per data di aggiunta su Drive, Meno recenti,
+     Nome A-Z; scelta ricordata sul telefono) e spostabili ("Sposta in…" dal
+     menu ⋯, anche le cartelle) con una finestra che naviga le cartelle.
    - Al livello di un elemento (persona, veicolo…) solo scadenze e
      sottocartelle: i documenti si caricano nelle sottocartelle (file messi
      lì direttamente da Drive compaiono come "Altri documenti").

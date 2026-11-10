@@ -31,6 +31,33 @@ const TEMPLATES = [
 // Categoria in cui finiscono le voci aggiunte velocemente (per lista).
 const target = {};
 
+/*
+ * Liste condivise ("lists"/"listItems") e private ("privLists"/"privItems",
+ * salvate nello spazio del database riservato a chi le crea).
+ */
+const isPriv = (listId) => !!store.get('privLists', listId);
+const LC = (listId) => (isPriv(listId) ? 'privLists' : 'lists');
+const IC = (listId) => (isPriv(listId) ? 'privItems' : 'listItems');
+function getList(id) {
+  const p = store.get('privLists', id);
+  return p ? { ...p, private: true } : store.get('lists', id);
+}
+const itemsOf = (listId) => store.getAll(IC(listId)).filter((i) => i.listId === listId);
+
+/** Rende privata una lista condivisa (o viceversa), spostando anche le voci. */
+function moveList(id, toPriv, patch = {}) {
+  const [fromL, toL, fromI, toI] = toPriv
+    ? ['lists', 'privLists', 'listItems', 'privItems']
+    : ['privLists', 'lists', 'privItems', 'listItems'];
+  const l = store.get(fromL, id);
+  if (!l) return;
+  const items = store.getAll(fromI).filter((i) => i.listId === id);
+  store.set(toL, id, { ...l, ...patch });
+  items.forEach((i) => store.set(toI, i.id, i));
+  store.remove(fromI, items.map((i) => i.id));
+  store.remove(fromL, id);
+}
+
 function createFromTemplate(t) {
   const sections = (t.sections || []).map((name) => ({ id: store.uid(), name }));
   return store.add('lists', { name: t.name, emoji: t.emoji, type: t.type, sections });
@@ -38,12 +65,12 @@ function createFromTemplate(t) {
 
 /** Aggiunge una categoria (sezione) alla lista, o riusa quella con lo stesso nome. */
 function addSection(listId, name) {
-  const list = store.get('lists', listId);
+  const list = getList(listId);
   const sections = list.sections || [];
   const same = sections.find((s) => s.name.toLowerCase() === name.toLowerCase());
   if (same) return same.id;
   const sec = { id: store.uid(), name };
-  store.update('lists', listId, { sections: [...sections, sec] });
+  store.update(LC(listId), listId, { sections: [...sections, sec] });
   return sec.id;
 }
 
@@ -69,24 +96,38 @@ export function listForm(list, presetType = 'altro', tripId = '') {
         <div class="emoji-pick">
           ${EMOJIS.map((e) => `<label><input type="radio" name="emoji" value="${e}" ${e === l.emoji ? 'checked' : ''}><span>${e}</span></label>`).join('')}
         </div>
-      </fieldset>`,
+      </fieldset>
+      ${tripId || l.tripId ? '' : `
+      <label class="switch cal"><input type="checkbox" name="private" ${l.private ? 'checked' : ''}><span>🔒 Lista privata: la vedi e la modifichi solo tu</span></label>`}`,
     onSubmit: (v) => {
       const t = TYPES.find((x) => x.id === v.type) || TYPES.at(-1);
       const data = { name: v.name, type: t.id, emoji: v.emoji || t.emoji };
-      if (list) store.update('lists', list.id, data);
-      else location.hash = `#/liste/${store.add('lists', { ...data, sections: [], ...(tripId ? { tripId } : {}) })}`;
+      const wantPriv = !!v.private;
+      if (list) {
+        if (!!list.private !== wantPriv) {
+          moveList(list.id, wantPriv, data);
+          toast(wantPriv ? 'Lista resa privata 🔒' : 'Lista condivisa con la famiglia');
+        } else {
+          store.update(LC(list.id), list.id, data);
+        }
+      } else {
+        const col = wantPriv ? 'privLists' : 'lists';
+        location.hash = `#/liste/${store.add(col, { ...data, sections: [], ...(tripId ? { tripId } : {}) })}`;
+      }
     },
     onDelete: list
       ? () => {
-          const items = store.getAll('listItems').filter((i) => i.listId === list.id);
-          const removedList = store.remove('lists', list.id);
-          const removedItems = store.remove('listItems', items.map((i) => i.id));
+          const lc = LC(list.id);
+          const ic = IC(list.id);
+          const items = itemsOf(list.id);
+          const removedList = store.remove(lc, list.id);
+          const removedItems = store.remove(ic, items.map((i) => i.id));
           location.hash = list.tripId ? `#/viaggi/${list.tripId}` : '#/liste';
           toast(`Lista "${list.name}" eliminata`, {
             label: 'Annulla',
             run: () => {
-              store.restore('lists', removedList);
-              store.restore('listItems', removedItems);
+              store.restore(lc, removedList);
+              store.restore(ic, removedItems);
             },
           });
         }
@@ -96,7 +137,7 @@ export function listForm(list, presetType = 'altro', tripId = '') {
 }
 
 function manageSections(listId) {
-  const list = store.get('lists', listId);
+  const list = getList(listId);
   const sections = list.sections || [];
   categoriesDialog({
     title: `Categorie di "${list.name}"`,
@@ -113,11 +154,11 @@ function manageSections(listId) {
       for (const name of added) {
         if (!next.some((s) => s.name.toLowerCase() === name.toLowerCase())) next.push({ id: store.uid(), name });
       }
-      store.getAll('listItems')
-        .filter((i) => i.listId === listId && deleted.includes(i.section))
-        .forEach((i) => store.update('listItems', i.id, { section: '' }));
+      itemsOf(listId)
+        .filter((i) => deleted.includes(i.section))
+        .forEach((i) => store.update(IC(listId), i.id, { section: '' }));
       if (deleted.includes(target[listId])) target[listId] = '';
-      store.update('lists', listId, { sections: next });
+      store.update(LC(listId), listId, { sections: next });
     },
   });
 }
@@ -128,7 +169,7 @@ function newSectionDialog(listId) {
     color: COLOR,
     submitLabel: 'Crea',
     body: `
-      <label class="field"><span>Nome</span><input name="name" required placeholder="${typeOf(store.get('lists', listId)).id === 'luoghi' ? 'es. Pizzerie' : 'es. Urgenti'}" autocomplete="off"></label>
+      <label class="field"><span>Nome</span><input name="name" required placeholder="${typeOf(getList(listId)).id === 'luoghi' ? 'es. Pizzerie' : 'es. Urgenti'}" autocomplete="off"></label>
       <p class="hint">Le nuove voci verranno aggiunte in questa categoria (puoi cambiarla toccando le etichette sotto la barra).</p>`,
     onSubmit: (v) => {
       target[listId] = addSection(listId, v.name);
@@ -155,7 +196,8 @@ function timePick(value = '') {
 }
 
 function itemForm(listId, item, prefill = '') {
-  const list = store.get('lists', listId);
+  const list = getList(listId);
+  const ic = IC(listId);
   const isLuogo = typeOf(list).id === 'luoghi';
   const isProgram = !!list.program;
   const isNew = !item;
@@ -183,12 +225,12 @@ function itemForm(listId, item, prefill = '') {
       const data = { text: v.text, section, due: v.due || '', notes: v.notes };
       if (isLuogo) data.place = v.place;
       if (isProgram) data.time = v.timeH ? `${v.timeH}:${v.timeM || '00'}` : '';
-      if (isNew) store.add('listItems', { ...data, listId, done: false });
-      else store.update('listItems', item.id, data);
+      if (isNew) store.add(ic, { ...data, listId, done: false });
+      else store.update(ic, item.id, data);
     },
     onDelete: isNew ? null : () => {
-      const removed = store.remove('listItems', item.id);
-      toast('Voce eliminata', { label: 'Annulla', run: () => store.restore('listItems', removed) });
+      const removed = store.remove(ic, item.id);
+      toast('Voce eliminata', { label: 'Annulla', run: () => store.restore(ic, removed) });
     },
   });
 }
@@ -219,8 +261,11 @@ function index(root) {
   });
 
   const draw = () => {
-    const lists = store.getAll('lists').filter((l) => !l.tripId).sort((a, b) => a.name.localeCompare(b.name, 'it'));
-    const items = store.getAll('listItems');
+    const lists = [
+      ...store.getAll('lists').filter((l) => !l.tripId),
+      ...store.getAll('privLists').map((l) => ({ ...l, private: true })),
+    ].sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    const items = [...store.getAll('listItems'), ...store.getAll('privItems')];
     if (!lists.length) {
       el.innerHTML = `
         <div class="empty-state">
@@ -243,9 +288,9 @@ function index(root) {
             const nSec = (l.sections || []).length;
             const info = its.length ? (its.length === 1 ? '1 voce' : `${its.length} voci`) : 'Vuota';
             return `
-              <a class="card list-card" href="#/liste/${l.id}">
+              <a class="card list-card ${l.private ? 'is-private' : ''}" href="#/liste/${l.id}">
                 <span class="emoji">${esc(l.emoji || t.emoji)}</span>
-                <span class="grow"><div class="name">${esc(l.name)}</div><div class="info">${info}${nSec ? ` · ${nSec} categorie` : ''}</div></span>
+                <span class="grow"><div class="name">${esc(l.name)}${l.private ? ' <span class="lock" title="Lista privata">🔒</span>' : ''}</div><div class="info">${l.private ? 'Privata · ' : ''}${info}${nSec ? ` · ${nSec} categorie` : ''}</div></span>
                 ${icon('chevron')}
               </a>`;
           }).join('')}</div>
@@ -280,7 +325,7 @@ function row(it) {
 }
 
 function detail(root, id, day = '') {
-  if (!store.get('lists', id)) {
+  if (!getList(id)) {
     location.replace('#/liste');
     return null;
   }
@@ -289,7 +334,7 @@ function detail(root, id, day = '') {
     ${pageHead({
       title: '<span data-title></span>',
       count: ' ',
-      back: store.get('lists', id).tripId ? `#/viaggi/${store.get('lists', id).tripId}` : '#/liste',
+      back: getList(id).tripId ? `#/viaggi/${getList(id).tripId}` : '#/liste',
       actions: `
         <button class="icon-btn" type="button" data-sections aria-label="Gestisci categorie">${icon('tag')}</button>
         <button class="icon-btn" type="button" data-edit-list aria-label="Modifica lista">${icon('edit')}</button>`,
@@ -303,7 +348,7 @@ function detail(root, id, day = '') {
     <div class="cat-groups" data-items></div>`;
 
   // Programma di viaggio: si aggiunge nel giorno toccato, o in quello di oggi.
-  const startList = store.get('lists', id);
+  const startList = getList(id);
   if (startList.program) {
     const today = ymd(new Date());
     const days = (startList.sections || []).map((x) => x.id);
@@ -317,7 +362,7 @@ function detail(root, id, day = '') {
 
   const form = root.querySelector('[data-add]');
   const el = root.querySelector('[data-items]');
-  root.querySelector('[data-edit-list]').onclick = () => listForm(store.get('lists', id));
+  root.querySelector('[data-edit-list]').onclick = () => listForm(getList(id));
   root.querySelector('[data-sections]').onclick = () => manageSections(id);
   root.querySelector('[data-detailed]').onclick = () => {
     const prefill = form.elements.text.value.trim();
@@ -329,7 +374,7 @@ function detail(root, id, day = '') {
     e.preventDefault();
     const text = form.elements.text.value.trim();
     if (!text) return;
-    store.add('listItems', { listId: id, text, section: target[id] || '', done: false, due: '', notes: '' });
+    store.add(IC(id), { listId: id, text, section: target[id] || '', done: false, due: '', notes: '' });
     form.elements.text.value = '';
     form.elements.text.focus();
   });
@@ -347,29 +392,30 @@ function detail(root, id, day = '') {
   el.addEventListener('click', (e) => {
     if (e.target.closest('a')) return; // link a Google Maps
     if (e.target.closest('[data-clear]')) {
-      const done = store.getAll('listItems').filter((i) => i.listId === id && i.done);
-      const removed = store.remove('listItems', done.map((i) => i.id));
-      toast(`${removed.length} voci rimosse`, { label: 'Annulla', run: () => store.restore('listItems', removed) });
+      const ic = IC(id);
+      const done = itemsOf(id).filter((i) => i.done);
+      const removed = store.remove(ic, done.map((i) => i.id));
+      toast(`${removed.length} voci rimosse`, { label: 'Annulla', run: () => store.restore(ic, removed) });
       return;
     }
     const act = e.target.closest('[data-act]');
     const rowEl = e.target.closest('[data-id]');
     if (!act || !rowEl) return;
-    const it = store.get('listItems', rowEl.dataset.id);
+    const it = store.get(IC(id), rowEl.dataset.id);
     if (!it) return;
-    if (act.dataset.act === 'toggle') store.update('listItems', it.id, { done: !it.done, doneAt: Date.now() });
+    if (act.dataset.act === 'toggle') store.update(IC(id), it.id, { done: !it.done, doneAt: Date.now() });
     if (act.dataset.act === 'edit') itemForm(id, it);
   });
 
   function draw() {
-    const l = store.get('lists', id);
+    const l = getList(id);
     if (!l) return; // eliminata: il cambio pagina è già in corso
     const t = typeOf(l);
     const sections = l.sections || [];
     if (!sections.some((s) => s.id === target[id])) target[id] = '';
 
-    root.querySelector('[data-title]').textContent = `${l.emoji || t.emoji} ${l.name}`;
-    const items = store.getAll('listItems').filter((i) => i.listId === id);
+    root.querySelector('[data-title]').textContent = `${l.emoji || t.emoji} ${l.name}${l.private ? ' 🔒' : ''}`;
+    const items = itemsOf(id);
     const open = items.filter((i) => !i.done)
       .sort((a, b) => (l.program ? (a.time || '99').localeCompare(b.time || '99') : 0) || a.createdAt - b.createdAt);
     const done = items.filter((i) => i.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));

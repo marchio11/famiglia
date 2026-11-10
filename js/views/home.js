@@ -6,6 +6,7 @@ import * as trips from '../viaggi.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
 import { assigneesOf } from './todo.js';
+import * as novita from '../novita.js';
 
 const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
 const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
@@ -36,10 +37,10 @@ function upcoming() {
     });
   }
 
-  for (const it of store.getAll('listItems')) {
+  for (const it of [...store.getAll('listItems'), ...store.getAll('privItems')]) {
     if (it.done || !it.due) continue;
     if (daysUntil(it.due) > SUMMARY_DAYS) continue;
-    const list = store.get('lists', it.listId);
+    const list = store.get('lists', it.listId) || store.get('privLists', it.listId);
     if (!list) continue;
     items.push({ date: it.due, title: it.text, sub: `${list.emoji || ''} ${list.name}`, href: `#/liste/${list.id}`, color: 'var(--c-liste)' });
   }
@@ -129,7 +130,7 @@ function tileInfo(id) {
     return `${open.length} attività${late ? ` · ${late} in ritardo` : ''}`;
   }
   if (id === 'liste') {
-    const n = store.getAll('lists').filter((l) => !l.tripId).length;
+    const n = store.getAll('lists').filter((l) => !l.tripId).length + store.getAll('privLists').length;
     if (!n) return 'Nessuna lista';
     return n === 1 ? '1 lista' : `${n} liste`;
   }
@@ -182,9 +183,10 @@ export default function home(root) {
     </section>
     <h2 class="section-label">Sezioni</h2>
     <nav class="tiles" data-tiles></nav>
-    <p class="version" data-version></p>`;
+    <p class="version"><span data-version></span> · <button class="link-btn news-link" type="button" data-news>✨ Novità</button></p>`;
 
   const $ = (s) => root.querySelector(s);
+  $('[data-news]').onclick = () => novita.show();
 
   /** Mostra al massimo SUMMARY_VISIBLE voci: le altre si vedono scorrendo. */
   function fitSummary(scrollTop = 0) {

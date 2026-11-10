@@ -23,7 +23,7 @@ const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 export const FOLDER = 'application/vnd.google-apps.folder';
 export const ROOT_NAME = 'Casa Marchionni';
-const FILE_FIELDS = 'id,name,mimeType,webViewLink,modifiedTime,size,parents,ownedByMe';
+const FILE_FIELDS = 'id,name,mimeType,webViewLink,modifiedTime,createdTime,size,parents,ownedByMe';
 
 /** Sezioni della pagina Documenti, nell'ordine in cui compaiono. */
 export const SECTIONS = [
@@ -333,7 +333,7 @@ export async function findEntity(folderId) {
 /** Tutte le cartelle dentro "Casa Marchionni": Map id -> { name, parent }. */
 let tree = null;
 let treeAt = 0;
-async function folderTree() {
+export async function folderTree() {
   if (tree && Date.now() - treeAt < 10 * 60_000) return tree;
   const c = config();
   const map = new Map([[c.rootId, { name: ROOT_NAME, parent: null }]]);
@@ -432,4 +432,30 @@ export async function download(file) {
     ? await google.request(`${API}/files/${file.id}/export`, { query: { mimeType: 'application/pdf' }, raw: true })
     : await google.request(`${API}/files/${file.id}`, { query: { alt: 'media', supportsAllDrives: 'true' }, raw: true });
   return res.blob();
+}
+
+/* ---------- Spostare file e cartelle ---------- */
+
+/** Sposta un file (o una cartella) in un'altra cartella. */
+export async function move(file, toFolderId) {
+  const from = file.parents?.[0];
+  await google.request(`${API}/files/${file.id}`, {
+    method: 'PATCH',
+    query: { addParents: toFolderId, removeParents: from, supportsAllDrives: 'true', fields: 'id,parents' },
+    json: {},
+  });
+  forgetListing(from);
+  forgetListing(toFolderId);
+  tree = null; // l'albero delle cartelle va ricostruito
+}
+
+/* ---------- Foto della lista della spesa ---------- */
+
+/** Cartella "Lista della spesa" dentro "Casa Marchionni" (creata la prima volta). */
+export async function shoppingFolder() {
+  const c = config();
+  if (c.sections.spesa) return c.sections.spesa;
+  const f = await ensureFolder('Lista della spesa', c.rootId);
+  store.update('config', 'drive', { sections: { ...c.sections, spesa: f.id } });
+  return f.id;
 }

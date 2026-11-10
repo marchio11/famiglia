@@ -2,6 +2,9 @@ import * as store from './store.js';
 import { pickUser, setAccount, knownName } from './user.js';
 import { esc, toast } from './util.js';
 import * as gcal from './gcal.js';
+import * as google from './google.js';
+import * as photos from './photos.js';
+import * as novita from './novita.js';
 import home from './views/home.js';
 import spesa from './views/spesa.js';
 import todo from './views/todo.js';
@@ -141,19 +144,25 @@ async function bootCloud() {
         cloud.logout();
       },
     });
-    store.connect();
+    store.connect(user.uid);
+    // Foto della spesa da eliminare su Drive rimaste in sospeso.
+    photos.processQueue();
     const name = knownName(user);
     if (name) store.setUser(name);
     if (!denied) startRouting();
+    if (name && !denied) setTimeout(novita.maybeShow, 800);
     if (!name) pickUser({ required: true });
   });
 }
+
+google.onChange(() => photos.processQueue());
 
 if (store.CLOUD) {
   bootCloud();
 } else {
   startRouting();
   if (!store.getUser()) pickUser({ required: true });
+  else setTimeout(novita.maybeShow, 800);
 }
 
 /* ---------- Aggiornamenti dell'app ---------- */

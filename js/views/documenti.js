@@ -587,6 +587,132 @@ function scadenzeCard() {
     </section>`;
 }
 
+/* ---------- Ordinamento dei documenti ---------- */
+
+const SORTS = [['recent', 'Più recenti'], ['old', 'Meno recenti'], ['name', 'Nome A-Z']];
+const SORT_KEY = 'cm:docSort';
+const addedAt = (f) => f.createdTime || f.modifiedTime || '';
+
+function getSort() {
+  try {
+    return localStorage.getItem(SORT_KEY) || 'recent';
+  } catch {
+    return 'recent';
+  }
+}
+function setSort(v) {
+  try {
+    localStorage.setItem(SORT_KEY, v);
+  } catch { /* ignora */ }
+}
+
+function sortFiles(files, how) {
+  const byName = (a, b) => a.name.localeCompare(b.name, 'it', { numeric: true, sensitivity: 'base' });
+  if (how === 'name') return [...files].sort(byName);
+  const dir = how === 'old' ? 1 : -1;
+  return [...files].sort((a, b) => dir * addedAt(a).localeCompare(addedAt(b)) || byName(a, b));
+}
+
+/* ---------- Sposta in… ---------- */
+
+/** Finestra per scegliere la cartella in cui spostare un file o una cartella. */
+async function movePicker(item, onDone) {
+  let tree;
+  try {
+    tree = await drive.folderTree();
+  } catch (err) {
+    toast(drive.explain(err));
+    return;
+  }
+  const rootId = drive.config().rootId;
+  const children = new Map();
+  for (const [fid, f] of tree) {
+    if (!f.parent) continue;
+    if (!children.has(f.parent)) children.set(f.parent, []);
+    children.get(f.parent).push({ id: fid, name: f.name });
+  }
+  children.forEach((l) => l.sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true })));
+
+  // Una cartella non si può spostare dentro sé stessa o le sue sottocartelle.
+  const blocked = new Set();
+  if (item.mimeType === drive.FOLDER) {
+    const stack = [item.id];
+    while (stack.length) {
+      const x = stack.pop();
+      blocked.add(x);
+      (children.get(x) || []).forEach((c) => stack.push(c.id));
+    }
+  }
+  const from = item.parents?.[0];
+  let cur = from && tree.has(from) ? (tree.get(from).parent || rootId) : rootId;
+
+  const path = (fid) => {
+    const parts = [];
+    for (let x = fid; x && tree.has(x); x = tree.get(x).parent) {
+      parts.unshift({ id: x, name: x === rootId ? '🏠 Casa Marchionni' : tree.get(x).name });
+    }
+    return parts;
+  };
+
+  const dlg = document.createElement('dialog');
+  dlg.className = 'sheet';
+  dlg.style.setProperty('--c', COLOR);
+  document.body.append(dlg);
+
+  function render() {
+    const kids = (children.get(cur) || []).filter((c) => !blocked.has(c.id));
+    const here = path(cur).at(-1)?.name || '';
+    const canMove = cur !== from && cur !== rootId;
+    dlg.innerHTML = `
+      <form method="dialog">
+        <div class="grab"></div>
+        <h2>Sposta "${esc(item.name)}"</h2>
+        <div class="crumbs">${path(cur).map((p, i, a) => (i < a.length - 1
+          ? `<button type="button" class="link-btn" data-go="${esc(p.id)}">${esc(p.name)}</button><span>›</span>`
+          : `<b>${esc(p.name)}</b>`)).join('')}</div>
+        <div class="menu-list move-list">
+          ${kids.length ? kids.map((c) => `<button type="button" class="menu-item" data-go="${esc(c.id)}"><span>📁</span>${esc(c.name)}</button>`).join('')
+            : '<p class="hint">Nessuna sottocartella qui.</p>'}
+        </div>
+        <p class="hint">${cur === from ? 'Si trova già in questa cartella: scegline un\'altra.'
+          : cur === rootId ? 'Entra in una cartella per scegliere dove spostarlo.'
+            : `Verrà spostato in <b>${esc(here)}</b>.`}</p>
+        <div class="actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" data-cancel>Annulla</button>
+          <button type="button" class="btn primary" data-here ${canMove ? '' : 'disabled'}>Sposta qui</button>
+        </div>
+      </form>`;
+  }
+
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg || e.target.closest('[data-cancel]')) return dlg.close();
+    const go = e.target.closest('[data-go]');
+    if (go) {
+      cur = go.dataset.go;
+      render();
+      return;
+    }
+    if (e.target.closest('[data-here]')) {
+      const name = path(cur).at(-1)?.name || '';
+      const dest = cur;
+      dlg.close();
+      toast('Sposto…');
+      drive.move(item, dest)
+        .then(() => {
+          toast(`Spostato in "${name}" ✓`);
+          onDone?.();
+        })
+        .catch((err) => toast(err.code === 'forbidden'
+          ? 'Google Drive non permette di spostarlo: probabilmente è stato caricato da un altro account. Può spostarlo chi l\'ha caricato.'
+          : drive.explain(err)));
+    }
+  });
+  dlg.addEventListener('close', () => dlg.remove());
+  render();
+  dlg.showModal();
+}
+
 /* ---------- Cartella ---------- */
 
 function folderView(root, id) {
@@ -673,7 +799,8 @@ function folderView(root, id) {
     }
 
     const folders = data.items.filter((f) => f.mimeType === drive.FOLDER);
-    const files = data.items.filter((f) => f.mimeType !== drive.FOLDER);
+    const sort = getSort();
+    const files = sortFiles(data.items.filter((f) => f.mimeType !== drive.FOLDER), sort);
     const isAltri = id === drive.config()?.sections.altri;
     if (isAltri && !folders.length) {
       html += `<div class="empty-state"><span class="big">👴</span><p><strong>Nessun familiare per ora</strong></p><p>Crea una cartella con il nome della persona (anche da Google Drive, dentro "Persone/Altri familiari") oppure tocca <b>Aggiungi</b>.</p></div>`;
@@ -695,11 +822,12 @@ function folderView(root, id) {
     if ((!entity && !protectedFolder) || files.length) html += `
       <section class="group">
         <h3 class="group-head"><span>📄 ${entity ? 'Altri documenti' : 'Documenti'}</span></h3>
+        ${files.length > 1 ? `<div class="chips sort-chips" role="group" aria-label="Ordina i documenti">${SORTS.map(([k, l]) => `<button type="button" class="chip" data-sort="${k}" aria-pressed="${k === sort}">${l}</button>`).join('')}</div>` : ''}
         ${files.length ? `<div class="card rows">${files.map((f) => `
           <div class="row doc-file" data-file="${esc(f.id)}">
             <a class="row-main doc-open" href="${esc(f.webViewLink || '#')}" target="_blank" rel="noopener">
               <div class="row-title"><span class="file-ico">${drive.fileIcon(f)}</span>${esc(f.name)}</div>
-              <div class="row-sub"><span>${new Date(f.modifiedTime).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>${f.size ? `<span>${drive.fileSize(f.size)}</span>` : ''}</div>
+              <div class="row-sub"><span>Aggiunto ${new Date(addedAt(f)).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>${f.size ? `<span>${drive.fileSize(f.size)}</span>` : ''}</div>
             </a>
             <button class="icon-btn" type="button" data-file-menu aria-label="Opzioni documento">⋯</button>
           </div>`).join('')}</div>`
@@ -799,8 +927,15 @@ function folderView(root, id) {
       if (s && entity) scadenzaMenu(entity, s);
       return;
     }
+    const sortBtn = e.target.closest('[data-sort]');
+    if (sortBtn) {
+      setSort(sortBtn.dataset.sort);
+      draw();
+      return;
+    }
     if (e.target.closest('[data-folder-menu]') && folder) {
       withPermission(() => menu(folder.name, [
+        { icon: '📁', label: 'Sposta in…', run: () => movePicker(folder, () => { location.hash = backHref(folder); }) },
         { icon: '✏️', label: 'Rinomina', run: () => nameDialog({ title: 'Rinomina cartella', value: folder.name }, (name) => {
           drive.rename(id, name).then(() => { toast('Cartella rinominata ✓'); load(); }).catch((err) => toast(drive.explain(err)));
         }) },
@@ -817,6 +952,7 @@ function folderView(root, id) {
       menu(f.name, [
         { icon: '👁️', label: 'Apri', run: () => window.open(f.webViewLink, '_blank', 'noopener') },
         ...(drive.canRead(f) ? [{ icon: '🔍', label: 'Leggi e trova scadenze', run: () => withPermission(() => readAndPropose(f, id, { onBusy: setBusy, onDone: load })) }] : []),
+        { icon: '📁', label: 'Sposta in…', run: () => withPermission(() => movePicker(f, load)) },
         { icon: '✏️', label: 'Rinomina', run: () => withPermission(() => nameDialog({ title: 'Rinomina documento', value: f.name }, (name) => {
           drive.rename(f.id, name).then(() => { toast('Documento rinominato ✓'); load(); }).catch((err) => toast(drive.explain(err)));
         })) },

@@ -18,8 +18,15 @@ service cloud.firestore {
         ];
     }
 
-    match /{document=**} {
-      allow read, write: if famiglia();
+    // Dati condivisi della famiglia (spesa, da fare, liste, viaggi…):
+    // tutte le collezioni principali tranne "users".
+    match /{collection}/{docId} {
+      allow read, write: if famiglia() && collection != 'users';
+    }
+
+    // Spazio privato di ciascuno (es. liste private): solo il proprietario.
+    match /users/{uid}/{rest=**} {
+      allow read, write: if famiglia() && request.auth.uid == uid;
     }
   }
 }

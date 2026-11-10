@@ -72,13 +72,25 @@ export const getCloud = () => cloud;
 
 let stopListening = null;
 
+/**
+ * Collezioni private: visibili solo a chi le crea. Nell'app hanno un nome
+ * (es. "privLists"), nel database stanno sotto users/<uid>/… e le regole di
+ * sicurezza permettono l'accesso solo a quell'utente.
+ */
+export const PRIVATE = { privLists: 'lists', privItems: 'listItems' };
+const paths = {};
+const pathOf = (col) => paths[col] || col;
+
 /** Inizia a ricevere i dati in tempo reale (dopo il login). */
-export function connect() {
+export function connect(uid) {
   disconnect();
+  for (const [name, sub] of Object.entries(PRIVATE)) paths[name] = `users/${uid}/${sub}`;
+  const names = [...COLLECTIONS, ...Object.keys(PRIVATE)];
+  const byPath = Object.fromEntries(names.map((n) => [pathOf(n), n]));
   stopListening = cloud.listen(
-    COLLECTIONS,
-    (col, map) => {
-      data[col] = map;
+    names.map(pathOf),
+    (path, map) => {
+      data[byPath[path]] = map;
       notify();
     },
     (e) => errorHandler(e),
@@ -117,7 +129,7 @@ export function add(col, obj) {
   const item = { ...obj, id, createdBy: getUser(), createdAt: Date.now() };
   data[col] ??= {};
   data[col][id] = item;
-  commit(() => cloud.write(col, id, item));
+  commit(() => cloud.write(pathOf(col), id, item));
   return id;
 }
 
@@ -126,7 +138,7 @@ export function set(col, id, obj) {
   const item = { ...obj, id };
   data[col] ??= {};
   data[col][id] = item;
-  commit(() => cloud.write(col, id, item));
+  commit(() => cloud.write(pathOf(col), id, item));
 }
 
 export function update(col, id, patch) {
@@ -134,7 +146,7 @@ export function update(col, id, patch) {
   if (!item) return;
   const full = { ...patch, updatedBy: getUser(), updatedAt: Date.now() };
   Object.assign(item, full);
-  commit(() => cloud.patch(col, id, full));
+  commit(() => cloud.patch(pathOf(col), id, full));
 }
 
 /** Elimina e restituisce le copie eliminate (per poterle ripristinare). */
@@ -142,7 +154,7 @@ export function remove(col, ids) {
   const list = (Array.isArray(ids) ? ids : [ids]).filter((id) => data[col]?.[id]);
   const removed = list.map((id) => data[col][id]);
   list.forEach((id) => delete data[col][id]);
-  if (list.length) commit(() => cloud.removeMany(col, list));
+  if (list.length) commit(() => cloud.removeMany(pathOf(col), list));
   return removed;
 }
 
@@ -151,7 +163,7 @@ export function restore(col, items) {
   if (!items.length) return;
   data[col] ??= {};
   for (const it of items) data[col][it.id] = it;
-  commit(() => cloud.writeMany(col, items));
+  commit(() => cloud.writeMany(pathOf(col), items));
 }
 
 /* ---------- Utente ---------- */
