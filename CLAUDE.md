@@ -174,10 +174,13 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    Due modi di aggiungere: veloce (categoria automatica) o con dettagli
    (categoria, quantità, urgente, **foto** già in fase di inserimento: "Scatta"
    apre direttamente la fotocamera con `capture="environment"`, "Galleria" le
-   foto del telefono).
+   foto del telefono). Nelle righe non compare chi ha aggiunto il prodotto
+   (solo quantità e "Urgente").
 2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
-   scadenza, priorità.
+   data di inizio facoltativa (`start`: prima di quel giorno l'attività sta
+   nel gruppo "In programma" in fondo e non conta né compare in home; senza,
+   parte subito; deve precedere la scadenza), scadenza, priorità.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
    Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
    Cinesi…). I luoghi hanno indirizzo con link a Google Maps. Liste
@@ -231,16 +234,20 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    per chi parte: conto alla rovescia nei 30 giorni prima, durante il
    viaggio il programma di oggi. Niente gestione spese (non serve).
 7. **Schermata iniziale**
-   - Parte superiore: riquadro riepilogativo con le scadenze più importanti
-     (prese da to-do, calendario, lista spesa o qualunque altra lista).
-     Regole attuali: to-do e voci di lista con scadenza entro 7 giorni;
-     to-do a **priorità alta** (anche senza data) solo per le persone
-     assegnate (o per tutti se è di tutti); eventi del calendario entro 7
-     giorni (inclusi i privati di chi guarda; quelli Famiglia con persone
-     coinvolte solo per loro); scadenze documenti entro 30 giorni; prodotti urgenti della spesa
-     (inseriti tra le cose di oggi). Massimo 3 voci visibili, le altre si
-     vedono scorrendo dentro il riquadro (contatore + barra di scorrimento
-     disegnata a mano, sempre visibile: quella di Android si nasconde).
+   - "In evidenza" (campanella): solo i "Da fare" di chi guarda (assegnati
+     a lui/lei o a tutti), già iniziati, tutti (non solo priorità alta):
+     prima quelli con scadenza, poi gli altri per priorità; più i prodotti
+     urgenti della spesa (tra le cose di oggi). Niente più liste, viaggi o
+     scadenze documenti (le scadenze arrivano comunque come eventi).
+   - "Eventi" (icona calendario, toni azzurri, solo in modalità cloud):
+     eventi del calendario dei prossimi 7 giorni che riguardano chi guarda
+     (coinvolto, di famiglia senza persone indicate, privati suoi), compresi
+     quelli creati da scadenze e viaggi. Nella sezione Calendario si vede
+     tutto come prima.
+   - Entrambi: massimo 3 voci visibili, le altre scorrendo dentro il
+     riquadro (contatore + barra di scorrimento disegnata a mano, sempre
+     visibile: quella di Android si nasconde). Funzioni `highlights()`,
+     `events()`, `box()`, `fill()` in `js/views/home.js`.
    - Parte inferiore: accesso alle sezioni sopra elencate.
 
 ## Account

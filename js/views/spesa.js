@@ -1,5 +1,5 @@
 import * as store from '../store.js';
-import { esc, byWho, toast, formDialog, pageHead, categorySelect, categoriesDialog, splitEmoji } from '../util.js';
+import { esc, toast, formDialog, pageHead, categorySelect, categoriesDialog, splitEmoji } from '../util.js';
 import { icon } from '../icons.js';
 import * as google from '../google.js';
 import * as drive from '../drive.js';
@@ -318,7 +318,7 @@ function itemForm(item, prefill = '') {
 }
 
 function row(item) {
-  const sub = [item.qty ? esc(item.qty) : '', byWho(item.createdBy)].filter(Boolean).join(' · ');
+  const sub = item.qty ? esc(item.qty) : '';
   return `
     <div class="row ${item.done ? 'done' : ''}" data-id="${item.id}">
       <button class="check" type="button" data-act="toggle" aria-label="${item.done ? 'Togli la spunta' : 'Spunta'} ${esc(item.name)}"></button>

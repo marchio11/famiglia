@@ -5,10 +5,41 @@
 
 import { esc } from './util.js';
 
-export const RELEASE = 34;
+export const RELEASE = 37;
 const SEEN_KEY = 'cm:seenRelease';
 
 const NOTES = {
+  37: {
+    title: 'Versione 37',
+    intro: 'Nuove sistemazioni, ancora una volta su vostra richiesta! 🛠️',
+    items: [
+      {
+        emoji: '🔔',
+        title: '"In evidenza" più tuo',
+        text: 'In cima alla home ora trovi solo i tuoi "Da fare" (quelli in cui sei indicato o che sono di tutti), tutti e non solo quelli urgenti, più le cose urgenti da comprare. Le attività degli altri non ti disturbano più.',
+      },
+      {
+        emoji: '📅',
+        title: 'Nuovo riquadro "Eventi"',
+        text: 'Subito sotto ci sono gli eventi del calendario dei prossimi 7 giorni: solo i tuoi, quelli di famiglia e i tuoi privati. Nella sezione Calendario continui a vedere tutto, con i colori di sempre.',
+      },
+      {
+        emoji: '⏳',
+        title: 'Da fare con data di inizio',
+        text: 'Creando un\'attività puoi indicare da quando si può cominciare: fino a quel giorno resta da parte ("In programma", in fondo alla lista) e poi compare da sola. Se metti solo la scadenza, parte subito.',
+      },
+      {
+        emoji: '🛒',
+        title: 'Spesa più pulita',
+        text: 'Nella lista della spesa non compare più il nome di chi ha aggiunto ogni prodotto.',
+      },
+      {
+        emoji: '💾',
+        title: 'Backup automatico',
+        text: 'Ogni giorno l\'app salva da sola una copia di tutti i dati su Google Drive (cartella "Backup app"), tenendo le ultime 30.',
+      },
+    ],
+  },
   34: {
     title: 'Versione 34',
     intro: 'Un aggiornamento fatto su misura, con le vostre richieste! 🎁',

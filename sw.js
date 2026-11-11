@@ -1,7 +1,7 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
 // Ricordati di aumentare VERSION a ogni modifica dei file, così i telefoni
 // scaricano la versione nuova.
-const VERSION = 'v36';
+const VERSION = 'v37';
 const CACHE = `casa-${VERSION}`;
 
 const FILES = [

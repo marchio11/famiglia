@@ -20,8 +20,22 @@ export function assigneesOf(t) {
 const isForAll = (list) => !list.length || list.length === store.MEMBERS.length;
 const isMine = (t, me) => assigneesOf(t).includes(me);
 
+/** Riguarda questa persona? (assegnata, oppure attività di tutti) */
+export const concerns = (t, me) => isForAll(assigneesOf(t)) || isMine(t, me);
+
+/** Già iniziata? Senza data di inizio parte subito. */
+export const started = (t) => !t.start || daysUntil(t.start) <= 0;
+
+/** Data breve, es. "1 dic" (con l'anno se non è quello in corso). */
+function shortDate(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  const opts = { day: 'numeric', month: 'short' };
+  if (y !== new Date().getFullYear()) opts.year = 'numeric';
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', opts);
+}
+
 function openForm(item) {
-  const t = item || { title: '', assignees: [], due: '', priority: 2, notes: '' };
+  const t = item || { title: '', assignees: [], start: '', due: '', priority: 2, notes: '' };
   const who = assigneesOf(t);
   formDialog({
     title: item ? 'Modifica attività' : 'Nuova attività',
@@ -36,6 +50,8 @@ function openForm(item) {
         </div>
         <p class="hint">Puoi sceglierne una, due o tre. Se non ne scegli nessuna, è per tutti.</p>
       </fieldset>
+      ${dateField('start', 'Inizio (facoltativo)', t.start || '', { quick: false })}
+      <p class="hint" style="margin: -4px 0 16px">Se la metti, l'attività resta da parte fino a quel giorno e poi compare da sola. Senza, parte da subito.</p>
       ${dateField('due', 'Scadenza', t.due)}
       <fieldset class="field"><legend>Priorità</legend>
         <div class="seg">
@@ -46,7 +62,11 @@ function openForm(item) {
     onSubmit: (v, form) => {
       const picked = new FormData(form).getAll('who');
       const assignees = isForAll(picked) ? [] : picked;
-      const data = { title: v.title, assignees, assignee: '', due: v.due, priority: Number(v.priority) || 2, notes: v.notes };
+      if (v.start && v.due && v.start > v.due) {
+        toast('La data di inizio deve venire prima della scadenza');
+        return false;
+      }
+      const data = { title: v.title, assignees, assignee: '', start: v.start || '', due: v.due, priority: Number(v.priority) || 2, notes: v.notes };
       if (item) store.update('todo', item.id, data);
       else {
         store.add('todo', { ...data, done: false });
@@ -82,7 +102,7 @@ function row(t) {
       <button class="check" type="button" data-act="toggle" aria-label="${t.done ? 'Segna come da fare' : 'Segna come fatto'}: ${esc(t.title)}"></button>
       <div class="row-main" data-act="edit">
         <div class="row-title">${esc(t.title)}</div>
-        <div class="row-sub">${t.done ? '' : dueTag(t.due)}${prio}${assignee}${notes}</div>
+        <div class="row-sub">${t.done ? '' : `${!started(t) ? `<span class="tag">${icon('calendar', 'sm')}Dal ${esc(shortDate(t.start))}</span>` : ''}${dueTag(t.due)}`}${prio}${assignee}${notes}</div>
       </div>
     </div>`;
 }
@@ -128,12 +148,13 @@ export default function todo(root) {
   function draw() {
     const me = store.getUser();
     const all = store.getAll('todo');
-    const open = all.filter((t) => !t.done);
+    const open = all.filter((t) => !t.done && started(t));
+    const later = all.filter((t) => !t.done && !started(t)).sort((a, b) => a.start.localeCompare(b.start));
     root.querySelector('[data-count]').textContent = open.length || '';
 
     const mineCount = open.filter((t) => isMine(t, me)).length;
     root.querySelector('[data-filters]').innerHTML = FILTERS.map((f) => {
-      const n = f.id === 'open' ? open.length : f.id === 'mine' ? mineCount : all.length - open.length;
+      const n = f.id === 'open' ? open.length : f.id === 'mine' ? mineCount : all.filter((t) => t.done).length;
       return `<button class="chip" type="button" data-filter="${f.id}" aria-pressed="${filter === f.id}">${f.label}${n ? ` · ${n}` : ''}</button>`;
     }).join('');
 
@@ -141,10 +162,21 @@ export default function todo(root) {
     if (filter === 'done') items = all.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     else if (filter === 'mine') items = open.filter((t) => isMine(t, me)).sort(sortOpen);
     else items = open.sort(sortOpen);
+    // Attività che iniziano più avanti: in fondo, a parte.
+    const waiting = filter === 'done' ? [] : filter === 'mine' ? later.filter((t) => isMine(t, me)) : later;
+    const waitingHtml = waiting.length ? `
+        <section class="group">
+          <h3 class="group-head"><span>In programma (iniziano più avanti)</span></h3>
+          <div class="card rows">${waiting.map(row).join('')}</div>
+        </section>` : '';
 
+    if (!items.length && waitingHtml) {
+      listEl.innerHTML = `<div class="empty-state"><span class="big">🎉</span><p><strong>Niente da fare per ora!</strong></p></div>${waitingHtml}`;
+      return;
+    }
     if (!items.length) {
       const msg = {
-        open: all.length ? ['🎉', 'Niente da fare!', 'Goditi il momento… o aggiungi una nuova attività.'] : ['📝', 'Nessuna attività', 'Tocca "Nuova" per aggiungere la prima: puoi scegliere chi se ne occupa, la scadenza e la priorità.'],
+        open: all.length ? ['🎉', 'Niente da fare!', 'Goditi il momento… o aggiungi una nuova attività.'] : ['📝', 'Nessuna attività', 'Tocca "Nuova" per aggiungere la prima: puoi scegliere chi se ne occupa, quando inizia, la scadenza e la priorità.'],
         mine: ['😎', 'Nessuna attività assegnata a te', 'Quelle di tutta la famiglia le trovi in "In corso".'],
         done: ['🗂️', 'Ancora nessuna attività completata', ''],
       }[filter];
@@ -181,7 +213,7 @@ export default function todo(root) {
           <div class="card rows">${g.map(row).join('')}</div>
         </section>`;
     }
-    listEl.innerHTML = html;
+    listEl.innerHTML = html + waitingHtml;
   }
 
   draw();

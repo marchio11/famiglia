@@ -5,107 +5,81 @@ import * as scad from '../scadenze.js';
 import * as trips from '../viaggi.js';
 import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
-import { assigneesOf } from './todo.js';
+import { assigneesOf, started as startedTodo, concerns as concernsTodo } from './todo.js';
 import * as novita from '../novita.js';
 
-const SUMMARY_DAYS = 7; // quanti giorni in avanti guardare
+const EVENT_DAYS = 7; // eventi del calendario: quanti giorni in avanti
 const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
-const SCAD_DAYS = 30; // le scadenze dei documenti compaiono un mese prima
 
-/** Raccoglie le scadenze da tutte le sezioni. */
-function upcoming() {
-  const items = [];
+/**
+ * "In evidenza": i "Da fare" di chi guarda (assegnati a lui/lei o a tutti),
+ * già iniziati, e i prodotti urgenti della spesa.
+ */
+function highlights() {
   const me = store.getUser();
-
-  // Da fare (to-do): quelli in scadenza nei prossimi giorni, più quelli a priorità alta
-  // (questi ultimi solo per le persone assegnate, o per tutti se è di tutti).
+  const items = [];
   for (const t of store.getAll('todo')) {
-    if (t.done) continue;
+    if (t.done || !startedTodo(t) || !concernsTodo(t, me)) continue;
     const list = assigneesOf(t);
     const forAll = !list.length || list.length === store.MEMBERS.length;
-    const soon = !!t.due && daysUntil(t.due) <= SUMMARY_DAYS;
-    const high = t.priority === 3 && (forAll || list.includes(me));
-    if (!soon && !high) continue;
     const names = list.map((m) => (m === me ? 'tu' : m)).sort((a, b) => (a === 'tu' ? -1 : b === 'tu' ? 1 : 0));
-    const who = forAll ? 'tutti' : names.join(' e ');
+    const high = t.priority === 3;
     items.push({
-      date: t.due || '', // senza data: in cima, con l'etichetta "Priorità alta"
+      date: t.due || '',
+      prio: t.priority || 2,
       title: t.title,
-      sub: `${high && t.due ? '🚩 Alta · ' : ''}Da fare · ${who}`,
+      sub: `${high && t.due ? '🚩 Alta · ' : ''}Da fare · ${forAll ? 'tutti' : names.join(' e ')}`,
       href: '#/todo',
       color: high ? 'var(--danger)' : 'var(--c-todo)',
+      tag: t.due ? null : high ? { cls: 'overdue', text: '🚩 Priorità alta' } : { cls: '', text: 'Senza scadenza' },
     });
   }
+  // Prima quelle con scadenza (la più vicina in cima), poi le altre per priorità.
+  items.sort((a, b) => (!a.date - !b.date) || a.date.localeCompare(b.date) || b.prio - a.prio);
 
-  for (const it of [...store.getAll('listItems'), ...store.getAll('privItems')]) {
-    if (it.done || !it.due) continue;
-    if (daysUntil(it.due) > SUMMARY_DAYS) continue;
-    const list = store.get('lists', it.listId) || store.get('privLists', it.listId);
-    if (!list) continue;
-    items.push({ date: it.due, title: it.text, sub: `${list.emoji || ''} ${list.name}`, href: `#/liste/${list.id}`, color: 'var(--c-liste)' });
-  }
-
-  // Viaggi (solo per chi parte): conto alla rovescia nei 30 giorni prima,
-  // durante il viaggio il programma di oggi.
-  const todayKey = ymd(new Date());
-  for (const t of trips.all()) {
-    if (!trips.concerns(t, me) || trips.status(t) === 'concluso') continue;
-    if (trips.status(t) === 'in corso') {
-      const prog = trips.programItems(t.id, todayKey).filter((i) => !i.done);
-      items.push({
-        date: todayKey,
-        title: `${t.emoji || '✈️'} Oggi: ${t.name}`,
-        sub: prog.length ? prog.slice(0, 2).map((i) => `${i.time ? `${i.time} ` : ''}${i.text}`).join(' · ') + (prog.length > 2 ? '…' : '') : 'Buon viaggio! 🎒',
-        href: `#/viaggi/${t.id}`,
-        color: 'var(--c-viaggi)',
-        tag: { cls: 'soon', text: trips.countdown(t).replace('In corso · ', '') },
-        order: -1,
-      });
-    } else if (daysUntil(t.start) <= 30) {
-      const prima = trips.listsOf(t.id).filter((l) => !l.program && l.type === 'cose');
-      const todo = store.getAll('listItems').filter((i) => !i.done && prima.some((l) => l.id === i.listId)).length;
-      items.push({
-        date: t.start,
-        title: `${t.emoji || '✈️'} ${t.name}: ${trips.countdown(t).toLowerCase()}`,
-        sub: `Viaggio${todo ? ` · ${todo} ${todo === 1 ? 'cosa' : 'cose'} da fare prima` : ''}`,
-        href: `#/viaggi/${t.id}`,
-        color: 'var(--c-viaggi)',
-      });
-    }
-  }
-
-  // Scadenze dei documenti: compaiono già 30 giorni prima.
-  for (const s of scad.all()) {
-    if (daysUntil(s.date) > SCAD_DAYS) continue;
-    items.push({
-      date: s.date,
-      title: `${scad.label(s)} · ${s.entityName}`,
-      sub: '📄 Scadenza documenti',
-      href: `#/documenti/${s.entityId}`,
-      color: 'var(--c-doc)',
+  const urgent = store.getAll('spesa').filter((i) => !i.done && i.urgent);
+  if (urgent.length) {
+    // I prodotti urgenti vanno tra le cose di oggi.
+    const names = urgent.slice(0, 3).map((i) => i.name).join(', ') + (urgent.length > 3 ? '…' : '');
+    const today = ymd(new Date());
+    const at = items.findIndex((it) => !it.date || it.date > today);
+    items.splice(at === -1 ? items.length : at, 0, {
+      title: `${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare`,
+      sub: names,
+      href: '#/spesa',
+      color: 'var(--c-spesa)',
+      tag: { cls: 'urgent', text: 'Spesa' },
     });
   }
+  return items;
+}
 
-  // Eventi del calendario (Famiglia + personali di chi guarda), dall'ultima copia.
-  // Quelli creati dalle scadenze non vengono ripetuti.
-  const fromScad = new Set([...scad.eventIds(), ...trips.eventIds()]);
-  for (const e of gcal.available() ? gcal.cached()?.events || [] : []) {
-    if (gcal.isOver(e) || fromScad.has(e.id) || !gcal.concerns(e, me)) continue;
+/**
+ * "Eventi": calendario dei prossimi 7 giorni, solo quelli di chi guarda
+ * (dove è coinvolto, quelli di famiglia senza persone indicate e i suoi privati).
+ */
+function events() {
+  const me = store.getUser();
+  const items = [];
+  for (const e of gcal.cached()?.events || []) {
+    if (gcal.isOver(e) || !gcal.concerns(e, me)) continue;
     const day = gcal.dayKey(e);
-    if (daysUntil(day) > SUMMARY_DAYS) continue;
+    if (daysUntil(day) > EVENT_DAYS) continue;
     const when = e.allDay ? 'tutto il giorno' : `ore ${gcal.timeOf(e.start)}`;
     const priv = e.cal === 'privato';
+    const who = e.who?.length && e.who.length < store.MEMBERS.length
+      ? e.who.map((m) => (m === me ? 'tu' : m)).join(' e ')
+      : 'Famiglia';
     items.push({
       date: day,
       title: e.title,
-      sub: `${priv ? '🔒 Solo tu' : `Calendario${e.who?.length ? ` · ${e.who.map((m) => (m === me ? 'tu' : m)).join(' e ')}` : ''}`} · ${when}`,
+      sub: `${priv ? '🔒 Solo tu' : who} · ${when}`,
       href: '#/calendario',
       color: priv ? memberColor(me) : 'var(--c-cal)',
       order: e.allDay ? 0 : gcal.startDate(e).getTime(),
     });
   }
-
-  items.sort((a, b) => a.date.localeCompare(b.date) || (a.order || 0) - (b.order || 0));
+  items.sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order);
   return items;
 }
 
@@ -124,7 +98,7 @@ function tileInfo(id) {
     return n ? `${n} da comprare` : 'Lista vuota';
   }
   if (id === 'todo') {
-    const open = store.getAll('todo').filter((t) => !t.done);
+    const open = store.getAll('todo').filter((t) => !t.done && startedTodo(t));
     const late = open.filter((t) => t.due && daysUntil(t.due) < 0).length;
     if (!open.length) return 'Tutto fatto! 🎉';
     return `${open.length} attività${late ? ` · ${late} in ritardo` : ''}`;
@@ -153,6 +127,20 @@ function tileInfo(id) {
   return '';
 }
 
+/** Riquadro della home con titolo, icona, contatore ed elenco scorrevole. */
+const box = (id, title, iconName, cls = '') => `
+    <section class="summary card ${cls}" aria-labelledby="${id}-title">
+      <header class="sum-head">
+        <span class="sum-badge">${icon(iconName)}</span>
+        <h2 id="${id}-title">${title}</h2>
+        <span class="sum-count" data-${id}-count></span>
+      </header>
+      <div class="sum-wrap">
+        <div class="sum-list" data-${id}-list></div>
+        <div class="sum-track" data-${id}-track hidden><div class="sum-thumb"></div></div>
+      </div>
+    </section>`;
+
 function greeting() {
   const h = new Date().getHours();
   if (h < 5) return 'Buonanotte';
@@ -170,17 +158,8 @@ export default function home(root) {
       </div>
       <button class="who" type="button" data-who aria-label="Cambia utente"></button>
     </header>
-    <section class="summary card" aria-labelledby="sum-title">
-      <header class="sum-head">
-        <span class="sum-badge">${icon('bell')}</span>
-        <h2 id="sum-title">In evidenza</h2>
-        <span class="sum-count" data-sum-count></span>
-      </header>
-      <div class="sum-wrap">
-        <div class="sum-list" data-sum-list></div>
-        <div class="sum-track" data-sum-track hidden><div class="sum-thumb"></div></div>
-      </div>
-    </section>
+    ${box('sum', 'In evidenza', 'bell')}
+    ${gcal.available() ? box('ev', 'Eventi', 'calendar', 'events') : ''}
     <h2 class="section-label">Sezioni</h2>
     <nav class="tiles" data-tiles></nav>
     <p class="version"><span data-version></span> · <button class="link-btn news-link" type="button" data-news>✨ Novità</button></p>`;
@@ -189,9 +168,9 @@ export default function home(root) {
   $('[data-news]').onclick = () => novita.show();
 
   /** Mostra al massimo SUMMARY_VISIBLE voci: le altre si vedono scorrendo. */
-  function fitSummary(scrollTop = 0) {
-    const list = $('[data-sum-list]');
-    const track = $('[data-sum-track]');
+  function fitSummary(id, scrollTop = 0) {
+    const list = $(`[data-${id}-list]`);
+    const track = $(`[data-${id}-track]`);
     const thumb = track.firstElementChild;
     const rows = list.querySelectorAll('.sum-row');
     const extra = rows.length - SUMMARY_VISIBLE;
@@ -228,36 +207,14 @@ export default function home(root) {
   }
   $('[data-who]').onclick = () => pickUser();
 
-  const draw = () => {
-    const me = store.getUser();
-    $('[data-hello]').textContent = me ? `${greeting()}, ${me}!` : `${greeting()}!`;
-    $('[data-who]').innerHTML = me ? `${avatar(me)}${esc(me)}` : `${icon('user')}Chi sei?`;
-
-    // Riquadro riepilogativo
-    const items = upcoming();
-    const urgent = store.getAll('spesa').filter((i) => !i.done && i.urgent);
-    if (urgent.length) {
-      // I prodotti urgenti vanno tra le cose di oggi.
-      const names = urgent.slice(0, 3).map((i) => i.name).join(', ') + (urgent.length > 3 ? '…' : '');
-      const today = ymd(new Date());
-      const at = items.findIndex((it) => it.date > today);
-      items.splice(at === -1 ? items.length : at, 0, {
-        title: `${urgent.length === 1 ? '1 cosa urgente' : `${urgent.length} cose urgenti`} da comprare`,
-        sub: names,
-        href: '#/spesa',
-        color: 'var(--c-spesa)',
-        tag: { cls: 'urgent', text: 'Spesa' },
-      });
-    }
-
-    const list = $('[data-sum-list]');
+  /** Riempie un riquadro (In evidenza / Eventi) con le sue voci. */
+  function fill(id, items, emptyHtml) {
+    const list = $(`[data-${id}-list]`);
     const prevScroll = list.scrollTop;
-    $('[data-sum-count]').textContent = items.length || '';
+    $(`[data-${id}-count]`).textContent = items.length || '';
     list.innerHTML = items.length
       ? items.map((it) => {
-        const tag = it.tag || (it.date
-          ? { cls: dueClass(it.date), text: relDate(it.date) }
-          : { cls: 'overdue', text: '🚩 Priorità alta' });
+        const tag = it.tag !== undefined && it.tag !== null ? it.tag : { cls: dueClass(it.date), text: relDate(it.date) };
         return `
           <a class="sum-row" href="${it.href}" style="--c:${it.color}">
             <span class="dot"></span>
@@ -267,8 +224,21 @@ export default function home(root) {
             </span>
           </a>`;
       }).join('')
-      : `<p class="empty">Tutto tranquillo: nessuna scadenza nei prossimi ${SUMMARY_DAYS} giorni 🌿</p>`;
-    fitSummary(prevScroll);
+      : `<p class="empty">${emptyHtml}</p>`;
+    fitSummary(id, prevScroll);
+  }
+
+  const draw = () => {
+    const me = store.getUser();
+    $('[data-hello]').textContent = me ? `${greeting()}, ${me}!` : `${greeting()}!`;
+    $('[data-who]').innerHTML = me ? `${avatar(me)}${esc(me)}` : `${icon('user')}Chi sei?`;
+
+    fill('sum', highlights(), 'Tutto tranquillo: niente da fare per te 🌿');
+    if (gcal.available()) {
+      fill('ev', events(), gcal.cached()
+        ? `Nessun evento nei prossimi ${EVENT_DAYS} giorni 🌿`
+        : '<a href="#/calendario">Apri il Calendario</a> per vedere qui i prossimi eventi');
+    }
 
     // Riquadri delle sezioni
     $('[data-tiles]').innerHTML = TILES.map((t) => `
