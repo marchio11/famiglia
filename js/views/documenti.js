@@ -8,8 +8,8 @@ import {
 import { icon } from '../icons.js';
 
 const COLOR = 'var(--c-doc)';
-const ITEM_ICON = { persona: '', altro: '👤', veicolo: '🚗', immobile: '🏠', animale: '🐶' };
-const ADD_LABEL = { altri: 'familiare', veicoli: 'veicolo', immobili: 'immobile', animali: 'animale' };
+const ITEM_ICON = { persona: '', altro: '👤', veicolo: '🚗', immobile: '🏠' };
+const ADD_LABEL = { altri: 'familiare', veicoli: 'veicolo', immobili: 'immobile' };
 
 /* ---------- Pezzi comuni ---------- */
 
@@ -470,7 +470,7 @@ function home(root) {
           ${error?.code === 'noroot'
             ? `<p class="gate-error">Non trovo la cartella "${drive.ROOT_NAME}" su Google Drive.</p>
                <p>Con l'<b>account di famiglia</b> crea su Drive una cartella chiamata esattamente <b>${drive.ROOT_NAME}</b> e condividila con i tre account personali come <b>Editor</b>. Poi riprova.</p>`
-            : `<p>L'app crea dentro <b>"${drive.ROOT_NAME}"</b> le cartelle Persone, Veicoli, Immobili e Animali, con le sottocartelle di base. Le cartelle che esistono già vengono riutilizzate.</p>`}
+            : `<p>L'app crea dentro <b>"${drive.ROOT_NAME}"</b> le cartelle Persone, Veicoli e Immobili, con le sottocartelle di base. Le cartelle che esistono già vengono riutilizzate.</p>`}
           <button class="btn primary" type="button" data-setup ${busy ? 'disabled' : ''}>Prepara le cartelle</button>
         </section>`;
       return;
@@ -540,7 +540,7 @@ function home(root) {
       const key = add.dataset.add;
       withPermission(() => nameDialog({
         title: `Nuovo ${ADD_LABEL[key]}`,
-        placeholder: { altri: 'es. Nonno Giuseppe', veicoli: 'es. Tesla', immobili: 'es. Casa al mare', animali: 'es. Tokyo' }[key],
+        placeholder: { altri: 'es. Nonno Giuseppe', veicoli: 'es. Tesla', immobili: 'es. Casa al mare' }[key],
         submitLabel: 'Crea',
         hint: 'Creo la cartella su Google Drive con le sottocartelle di base, che potrai cambiare.',
       }, (name) => {

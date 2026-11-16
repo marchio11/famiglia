@@ -88,7 +88,7 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
   le cartelle ogni volta (copia in localStorage `cm:drive:<uid>:…` per uso
   offline). Id delle cartelle principali in Firestore `config/drive`.
   Struttura: `Casa Marchionni/{Persone/{Andrea,Laura,Claudia,Altri
-  familiari/…},Veicoli,Immobili,Animali}`; sottocartelle predefinite per
+  familiari/…},Veicoli,Immobili}`; sottocartelle predefinite per
   tipo (modificabili). Eliminare = cestino di Drive (o togliere dalla cartella
   se il file è di un altro account). Caricamento "resumable".
 - `js/scadenze.js` — scadenze in Firestore `scadenze` ({entityId, entityName,
@@ -207,13 +207,14 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      Calendar abilitata; schermata di consenso OAuth con i 3 account come
      utenti di test (o app pubblicata): compare l'avviso "app non verificata".
 5. **Documenti** (tutti vedono tutto)
-   - Ordine delle sezioni: Persone, Animali, Veicoli, Immobili.
+   - Ordine delle sezioni: Persone, Veicoli, Immobili. (La sezione Animali è
+     stata tolta a novembre 2026: il cane Tokyo ha una sua webapp separata;
+     eventuali scadenze con `kind: 'animale'` sono ignorate.)
    - Persone: Andrea, Laura, Claudia + "Altri familiari" come ultima voce del
      riquadro Persone (apre la cartella con i nomi, es. nonni per
      successioni, creati anche da Drive), ognuno con sottocartelle.
    - Veicoli: Toyota Yaris, Hyundai i10, Camper (+ nuovi dall'app).
    - Immobili: una cartella per ogni immobile.
-   - Animali: Tokyo (il cane).
    - File ordinabili (Più recenti per data di aggiunta su Drive, Meno recenti,
      Nome A-Z; scelta ricordata sul telefono) e spostabili ("Sposta in…" dal
      menu ⋯, anche le cartelle) con una finestra che naviga le cartelle.

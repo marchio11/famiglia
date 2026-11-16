@@ -10,7 +10,6 @@
 //     Persone/ Andrea, Laura, Claudia, Altri familiari/ (altri nomi)
 //     Veicoli/ Toyota Yaris, Hyundai i10, Camper
 //     Immobili/
-//     Animali/ Tokyo
 //
 // Gli id delle cartelle principali sono salvati in Firestore (config/drive),
 // così tutti i telefoni usano le stesse.
@@ -29,7 +28,6 @@ const FILE_FIELDS = 'id,name,mimeType,webViewLink,modifiedTime,createdTime,size,
 export const SECTIONS = [
   { key: 'persone', name: 'Persone', folder: 'Persone', kind: 'persona', emoji: '👨‍👩‍👧' },
   { key: 'altri', name: 'Altri familiari', folder: 'Altri familiari', parent: 'persone', kind: 'persona', emoji: '👴' },
-  { key: 'animali', name: 'Animali', folder: 'Animali', kind: 'animale', emoji: '🐾' },
   { key: 'veicoli', name: 'Veicoli', folder: 'Veicoli', kind: 'veicolo', emoji: '🚗' },
   { key: 'immobili', name: 'Immobili', folder: 'Immobili', kind: 'immobile', emoji: '🏠' },
 ];
@@ -40,7 +38,6 @@ export const DEFAULT_SUBFOLDERS = {
   altro: ['Documenti'],
   veicolo: ['Libretto e assicurazione', 'Bollo', 'Revisioni e tagliandi', 'Multe e varie'],
   immobile: ['Atti e contratti', 'Utenze', 'Manutenzioni', 'Tasse'],
-  animale: ['Libretto sanitario', 'Visite e ricette', 'Vaccini'],
 };
 
 /** Elementi creati alla prima configurazione. */
@@ -49,7 +46,6 @@ const INITIAL = {
   altri: [],
   veicoli: ['Toyota Yaris', 'Hyundai i10', 'Camper'],
   immobili: [],
-  animali: ['Tokyo'],
 };
 
 export const { available, connected, connect } = google;

@@ -122,7 +122,7 @@ function tileInfo(id) {
   }
   if (id === 'documenti') {
     const next = scad.all().find((s) => daysUntil(s.date) >= -30);
-    return next ? `Prossima scadenza: ${scad.label(next)} · ${next.entityName} · ${relDate(next.date).toLowerCase()}` : 'Persone, veicoli, immobili, animali';
+    return next ? `Prossima scadenza: ${scad.label(next)} · ${next.entityName} · ${relDate(next.date).toLowerCase()}` : 'Persone, veicoli, immobili';
   }
   return '';
 }

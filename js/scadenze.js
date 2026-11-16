@@ -36,12 +36,6 @@ export const TYPES = {
     { id: 'tasse', name: 'Tasse (IMU…)', months: 6 },
     { id: 'altro', name: 'Altro' },
   ],
-  animale: [
-    { id: 'vaccino', name: 'Vaccino', months: 12 },
-    { id: 'antiparassitario', name: 'Antiparassitario', months: 3 },
-    { id: 'visita', name: 'Visita dal veterinario', months: 12 },
-    { id: 'altro', name: 'Altro' },
-  ],
 };
 
 export const typesFor = (kind) => TYPES[kind] || PERSONA;
@@ -147,7 +141,8 @@ export async function removeScadenza(s) {
 }
 
 /** Tutte le scadenze, dalla più vicina. */
-export const all = () => store.getAll('scadenze').sort((a, b) => a.date.localeCompare(b.date));
+// Le scadenze degli animali (sezione tolta: Tokyo ha la sua app) non si mostrano più.
+export const all = () => store.getAll('scadenze').filter((s) => s.kind !== 'animale').sort((a, b) => a.date.localeCompare(b.date));
 
 /** Id degli eventi di calendario che corrispondono a scadenze (per non mostrarli due volte). */
 export const eventIds = () => new Set(store.getAll('scadenze').map((s) => s.eventId).filter(Boolean));
