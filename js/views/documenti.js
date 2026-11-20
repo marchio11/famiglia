@@ -817,11 +817,12 @@ function folderView(root, id) {
             </a>`).join('')}</div>
         </section>`;
     }
-    // Al livello di una persona/veicolo/… i documenti vanno nelle sottocartelle:
-    // la sezione compare solo se qualcuno ha messo dei file qui da Drive.
-    if ((!entity && !protectedFolder) || files.length) html += `
+    // Al livello di una persona/veicolo/immobile i documenti di solito stanno
+    // nelle sottocartelle, ma si possono caricare anche qui: la sezione compare
+    // se ci sono file o se l'elemento non ha ancora sottocartelle.
+    if ((!entity && !protectedFolder) || files.length || (entity && !folders.length)) html += `
       <section class="group">
-        <h3 class="group-head"><span>📄 ${entity ? 'Altri documenti' : 'Documenti'}</span></h3>
+        <h3 class="group-head"><span>📄 ${entity && folders.length ? 'Altri documenti' : 'Documenti'}</span></h3>
         ${files.length > 1 ? `<div class="chips sort-chips" role="group" aria-label="Ordina i documenti">${SORTS.map(([k, l]) => `<button type="button" class="chip" data-sort="${k}" aria-pressed="${k === sort}">${l}</button>`).join('')}</div>` : ''}
         ${files.length ? `<div class="card rows">${files.map((f) => `
           <div class="row doc-file" data-file="${esc(f.id)}">
@@ -902,12 +903,27 @@ function folderView(root, id) {
           { icon: '👤', label: 'Nuovo familiare', run: () => nameDialog({ title: 'Nuovo familiare', placeholder: 'es. Nonno Giuseppe', submitLabel: 'Crea', hint: 'Creo la sua cartella su Google Drive con la sottocartella "Documenti".' }, (name) => {
             drive.createItem('altri', name).then((item) => { toast(`"${name}" creato ✓`); location.hash = `#/documenti/${item.id}`; }).catch((err) => toast(drive.explain(err)));
           }) },
-        ] : entity ? [
-          { icon: '⏰', label: 'Nuova scadenza', run: () => scadenzaForm(entity, null) },
         ] : [
+          ...(entity ? [{ icon: '⏰', label: 'Nuova scadenza', run: () => scadenzaForm(entity, null) }] : []),
           { icon: '🔍', label: 'Fotografa e leggi un documento', run: () => $('[data-camera-ocr]').click() },
           { icon: '📷', label: 'Scatta una foto', run: () => $('[data-camera]').click() },
           { icon: '📄', label: 'Carica un file dal telefono', run: () => $('[data-files]').click() },
+          // Elemento senza sottocartelle (es. creato da Drive): propone quelle di base.
+          ...(entity && !drive.cachedFolder(id)?.items.some((f) => f.mimeType === drive.FOLDER) ? [{
+            icon: '🗂️',
+            label: `Crea le cartelle di base (${(drive.DEFAULT_SUBFOLDERS[entity.kind] || []).join(', ')})`,
+            run: async () => {
+              setBusy('Creo le cartelle…');
+              try {
+                for (const name of drive.DEFAULT_SUBFOLDERS[entity.kind] || []) await drive.createFolder(name, id);
+                toast('Cartelle create ✓');
+              } catch (err) {
+                toast(drive.explain(err));
+              }
+              setBusy('');
+              load();
+            },
+          }] : []),
         ]),
         { icon: '📁', label: 'Nuova cartella', run: () => nameDialog({ title: 'Nuova cartella', placeholder: 'es. Fatture', submitLabel: 'Crea' }, (name) => {
           drive.createFolder(name, id).then(() => { toast('Cartella creata ✓'); load(); }).catch((err) => toast(drive.explain(err)));

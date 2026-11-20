@@ -218,9 +218,11 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - File ordinabili (Più recenti per data di aggiunta su Drive, Meno recenti,
      Nome A-Z; scelta ricordata sul telefono) e spostabili ("Sposta in…" dal
      menu ⋯, anche le cartelle) con una finestra che naviga le cartelle.
-   - Al livello di un elemento (persona, veicolo…) solo scadenze e
-     sottocartelle: i documenti si caricano nelle sottocartelle (file messi
-     lì direttamente da Drive compaiono come "Altri documenti").
+   - Al livello di un elemento (persona, veicolo, immobile…) scadenze,
+     sottocartelle e anche documenti caricati direttamente lì ("Documenti" se
+     non ci sono sottocartelle, altrimenti "Altri documenti"). Se l'elemento
+     non ha sottocartelle (es. creato da Drive) il menu "Aggiungi" propone
+     "Crea le cartelle di base" (`drive.DEFAULT_SUBFOLDERS` del tipo).
    - Gestione scadenze per ogni elemento, con "Rinnovata" che propone la
      prossima data; in home compaiono 30 giorni prima.
      Anche il riquadro "Prossime scadenze" in cima ai Documenti mostra solo
