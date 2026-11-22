@@ -200,6 +200,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    Cinesi…). I luoghi hanno indirizzo con link a Google Maps. Liste
    **private** (🔒, solo per chi le crea; si può passare da condivisa a privata
    e viceversa da "Modifica lista": lista e voci vengono spostate).
+   Nelle voci delle liste (anche private e di viaggio) non compare chi le ha
+   aggiunte.
 4. **Calendario** — Google Calendar condiviso "Famiglia".
    - Schermata: riquadro "Prossimi impegni" (3 eventi) + griglia del mese
      (lunedì-domenica, pallini colorati: arancione Famiglia, colore della

@@ -1,6 +1,6 @@
 import * as store from '../store.js';
 import {
-  esc, byWho, toast, formDialog, pageHead, dueTag, dateField, categorySelect, categoriesDialog, ymd,
+  esc, toast, formDialog, pageHead, dueTag, dateField, categorySelect, categoriesDialog, ymd,
 } from '../util.js';
 import { icon } from '../icons.js';
 
@@ -313,7 +313,7 @@ function row(it) {
   const maps = it.place
     ? `<a class="maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${it.text} ${it.place}`)}" target="_blank" rel="noopener">${icon('pin', 'sm')}${esc(it.place)}</a>`
     : '';
-  const sub = [it.done ? '' : dueTag(it.due), maps, it.notes ? '<span>📝 Note</span>' : '', byWho(it.createdBy)].filter(Boolean).join('');
+  const sub = [it.done ? '' : dueTag(it.due), maps, it.notes ? '<span>📝 Note</span>' : ''].filter(Boolean).join('');
   return `
     <div class="row ${it.done ? 'done' : ''}" data-id="${it.id}">
       <button class="check" type="button" data-act="toggle" aria-label="${it.done ? 'Togli la spunta' : 'Spunta'}: ${esc(it.text)}"></button>
