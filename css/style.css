@@ -19,6 +19,7 @@
   --c-cal: #d9774b;
   --c-doc: #8a6d4b;
   --c-viaggi: #1f8a8a;
+  --c-faccende: #b8457e;
 
   --radius: 18px;
   --radius-sm: 12px;
@@ -47,6 +48,7 @@
     --c-cal: #ff7a45;
     --c-doc: #f2a93b;
     --c-viaggi: #14c8c0;
+    --c-faccende: #ff5c9d;
     --shadow: 0 1px 2px rgba(0, 0, 0, .35);
     color-scheme: dark;
   }
@@ -1023,3 +1025,31 @@ dialog.news .news-head p { margin: 2px 0 0; color: var(--muted); font-size: .85r
 dialog.news h2:focus { outline: none; }
 .photo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .photo-btn { height: 44px; padding: 0 14px; }
+
+/* ---------- Faccende ---------- */
+.every-pick { display: flex; align-items: center; gap: 10px; }
+.every-pick > span { font-weight: 600; }
+.every-pick input { width: 5.5rem; flex: none; }
+.every-pick select { flex: 1; }
+.suggest-list { margin-top: 10px; }
+.suggest-list small { color: var(--muted); font-weight: 400; }
+.suggest-list .switch input { accent-color: var(--c); }
+.chore .lead { font-size: 1.5rem; }
+.chore-bar { height: 5px; border-radius: 4px; margin-top: 8px; background: color-mix(in srgb, var(--muted) 20%, transparent); overflow: hidden; }
+.chore-bar span { display: block; height: 100%; border-radius: 4px; background: #2fbf71; }
+.chore.soon .chore-bar span { background: #ffa726; }
+.chore.late .chore-bar span { background: var(--danger); width: 100% !important; }
+.done-btn {
+  flex: none;
+  border: 2px solid var(--c);
+  background: transparent;
+  color: var(--c);
+  font: inherit;
+  font-weight: 800;
+  font-size: .9rem;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.chore.late .done-btn { background: var(--c); color: #fff; }
+.done-btn:active { transform: scale(.95); }

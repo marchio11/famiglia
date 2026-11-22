@@ -13,8 +13,9 @@ import liste from './views/liste.js';
 import calendario from './views/calendario.js';
 import documenti from './views/documenti.js';
 import viaggi from './views/viaggi.js';
+import faccende from './views/faccende.js';
 
-const routes = { '': home, spesa, todo, liste, calendario, viaggi, documenti };
+const routes = { '': home, spesa, todo, faccende, liste, calendario, viaggi, documenti };
 let root = document.getElementById('app');
 let cleanup = null;
 let routing = false;

@@ -7,6 +7,7 @@ import { icon } from '../icons.js';
 import { pickUser } from '../user.js';
 import { assigneesOf, started as startedTodo, concerns as concernsTodo } from './todo.js';
 import * as novita from '../novita.js';
+import * as chores from './faccende.js';
 
 const EVENT_DAYS = 7; // eventi del calendario: quanti giorni in avanti
 const SUMMARY_VISIBLE = 3; // voci visibili senza scorrere
@@ -51,6 +52,21 @@ function highlights() {
       tag: { cls: 'urgent', text: 'Spesa' },
     });
   }
+
+  // Faccende in ritardo: una sola riga riassuntiva (sono di tutti).
+  const lateChores = chores.late();
+  if (lateChores.length) {
+    const names = lateChores.slice(0, 3).map((f) => f.name).join(', ') + (lateChores.length > 3 ? '…' : '');
+    const today = ymd(new Date());
+    const at = items.findIndex((it) => !it.date || it.date > today);
+    items.splice(at === -1 ? items.length : at, 0, {
+      title: `${lateChores.length === 1 ? '1 faccenda' : `${lateChores.length} faccende`} in ritardo`,
+      sub: names,
+      href: '#/faccende',
+      color: 'var(--c-faccende)',
+      tag: { cls: 'urgent', text: '🧹 Faccende' },
+    });
+  }
   return items;
 }
 
@@ -86,10 +102,11 @@ function events() {
 const TILES = [
   { id: 'spesa', name: 'Spesa', icon: 'cart', color: 'var(--c-spesa)' },
   { id: 'todo', name: 'Da fare', icon: 'todo', color: 'var(--c-todo)' },
+  { id: 'faccende', name: 'Faccende', icon: 'broom', color: 'var(--c-faccende)' },
   { id: 'liste', name: 'Liste', icon: 'list', color: 'var(--c-liste)' },
   { id: 'calendario', name: 'Calendario', icon: 'calendar', color: 'var(--c-cal)' },
   { id: 'viaggi', name: 'Viaggi', icon: 'plane', color: 'var(--c-viaggi)' },
-  { id: 'documenti', name: 'Documenti', icon: 'folder', color: 'var(--c-doc)' },
+  { id: 'documenti', name: 'Documenti', icon: 'folder', color: 'var(--c-doc)', wide: true },
 ];
 
 function tileInfo(id) {
@@ -102,6 +119,14 @@ function tileInfo(id) {
     const late = open.filter((t) => t.due && daysUntil(t.due) < 0).length;
     if (!open.length) return 'Tutto fatto! 🎉';
     return `${open.length} attività${late ? ` · ${late} in ritardo` : ''}`;
+  }
+  if (id === 'faccende') {
+    const all = chores.active();
+    if (!all.length) return 'Pulizie e lavori di casa';
+    const n = chores.late().length;
+    if (n) return `${n} in ritardo`;
+    const soon = all.filter((f) => chores.status(f).level === 'soon').length;
+    return soon ? `Tutto in ordine · ${soon} a breve` : 'Tutto in ordine ✨';
   }
   if (id === 'liste') {
     const n = store.getAll('lists').filter((l) => !l.tripId).length + store.getAll('privLists').length;

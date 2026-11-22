@@ -5,10 +5,41 @@
 
 import { esc } from './util.js';
 
-export const RELEASE = 37;
+export const RELEASE = 40;
 const SEEN_KEY = 'cm:seenRelease';
 
 const NOTES = {
+  40: {
+    title: 'Versione 40',
+    intro: 'Arriva una sezione nuova, pensata tutti insieme! 🧹',
+    items: [
+      {
+        emoji: '🧹',
+        title: 'Faccende di casa',
+        text: 'Ogni faccenda ha il suo tempo (es. "bagno ogni settimana", "tende ogni 6 mesi"): quando qualcuno la fa tocca ✓ Fatto e il conto alla rovescia riparte. Per cominciare puoi scegliere tra quelle suggerite.',
+      },
+      {
+        emoji: '🔴',
+        title: 'Niente si dimentica',
+        text: 'Se il tempo di una faccenda scade, diventa urgente e compare anche in "In evidenza" nella home.',
+      },
+      {
+        emoji: '🕘',
+        title: 'Chi ha fatto cosa',
+        text: 'Ogni volta resta scritto chi l\'ha fatta e quando: lo trovi nella scheda "Storico". Se te ne ricordi dopo, puoi segnarla in un altro giorno (o a nome di chi l\'ha fatta).',
+      },
+      {
+        emoji: '✏️',
+        title: 'Tutto modificabile',
+        text: 'Tocca una faccenda per cambiare nome o tempi, o per eliminarla: lo storico di quello che è stato fatto resta comunque.',
+      },
+      {
+        emoji: '📂',
+        title: 'Documenti anche negli immobili',
+        text: 'Dentro persone, veicoli e immobili ora puoi caricare documenti direttamente, o creare con un tocco le cartelle di base.',
+      },
+    ],
+  },
   37: {
     title: 'Versione 37',
     intro: 'Nuove sistemazioni, ancora una volta su vostra richiesta! 🛠️',

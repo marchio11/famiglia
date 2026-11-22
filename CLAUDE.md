@@ -153,7 +153,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
 - `js/user.js` — nome mostrato nell'app: in cloud si ricava dal nome
   dell'account Google (se è Andrea/Laura/Claudia), altrimenti si sceglie una
   volta e si ricorda per quell'account.
-- `js/views/*.js` — una vista per sezione.
+- `js/views/*.js` — una vista per sezione. `util.sheetMenu(title, actions,
+  color)` = menu a comparsa dal basso (usato da Documenti e Faccende).
 - Testo base 18px (`html { font-size: 112.5% }`): usare sempre `rem`.
 - Niente `<input type="time">`: l'orologio nativo di Android esce dallo
   schermo con i caratteri grandi → usare menu ore/minuti (`timeField`).
@@ -181,6 +182,19 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    data di inizio facoltativa (`start`: prima di quel giorno l'attività sta
    nel gruppo "In programma" in fondo e non conta né compare in home; senza,
    parte subito; deve precedere la scadenza), scadenza, priorità.
+2b. **Faccende** (`js/views/faccende.js`, Firestore `faccende`) — faccende
+   di casa con un "timer": {name, emoji, n, unit (giorni/settimane/mesi),
+   every (giorni), since, history: [{by, day, at}], deleted}. Ultima volta =
+   data più recente tra `since` e lo storico; scadenza = ultima + `every`;
+   stati: in ritardo (scaduta → "Urgente", in home), a breve (ultimo 20% del
+   tempo, 1-7 giorni), in ordine; mai fatta = "Da fare" subito. "✓ Fatto"
+   registra oggi + utente (con Annulla); dal menu: fatta un altro giorno o da
+   un altro, storico (si può togliere una registrazione), modifica, elimina.
+   Eliminare = `deleted: true`: sparisce dall'elenco ma lo storico resta
+   nella scheda "Storico" (raggruppato per mese). Sono di tutti (nessun
+   responsabile, niente turni, niente classifica, niente Calendar: scelte
+   della famiglia, da rivedere eventualmente più avanti). Elenco di faccende
+   suggerite (`SUGGESTED`) per cominciare.
 3. **Liste generiche** — raggruppate per tipo (Acquisti, Luoghi da visitare,
    Cose da fare, Altro); ogni lista può avere categorie interne (es. Pizzerie,
    Cinesi…). I luoghi hanno indirizzo con link a Google Maps. Liste
@@ -240,7 +254,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    - "In evidenza" (campanella): solo i "Da fare" di chi guarda (assegnati
      a lui/lei o a tutti), già iniziati, tutti (non solo priorità alta):
      prima quelli con scadenza, poi gli altri per priorità; più i prodotti
-     urgenti della spesa (tra le cose di oggi). Niente più liste, viaggi o
+     urgenti della spesa (tra le cose di oggi) e una riga "N faccende in
+     ritardo" (per tutti). Niente più liste, viaggi o
      scadenze documenti (le scadenze arrivano comunque come eventi).
    - "Eventi" (icona calendario, toni azzurri, solo in modalità cloud):
      eventi del calendario dei prossimi 7 giorni che riguardano chi guarda
@@ -251,7 +266,8 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
      riquadro (contatore + barra di scorrimento disegnata a mano, sempre
      visibile: quella di Android si nasconde). Funzioni `highlights()`,
      `events()`, `box()`, `fill()` in `js/views/home.js`.
-   - Parte inferiore: accesso alle sezioni sopra elencate.
+   - Parte inferiore: accesso alle sezioni (Spesa, Da fare, Faccende, Liste,
+     Calendario, Viaggi; Documenti su tutta la larghezza in fondo).
 
 ## Account
 

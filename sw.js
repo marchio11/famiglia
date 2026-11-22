@@ -1,7 +1,7 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
 // Ricordati di aumentare VERSION a ogni modifica dei file, così i telefoni
 // scaricano la versione nuova.
-const VERSION = 'v39';
+const VERSION = 'v40';
 const CACHE = `casa-${VERSION}`;
 
 const FILES = [
@@ -33,6 +33,7 @@ const FILES = [
   'js/views/calendario.js',
   'js/views/documenti.js',
   'js/views/viaggi.js',
+  'js/views/faccende.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',

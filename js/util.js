@@ -167,6 +167,32 @@ export function formDialog({ title, body, submitLabel = 'Salva', color, onSubmit
   return dlg;
 }
 
+/** Piccolo menu a comparsa dal basso con un elenco di azioni. */
+export function sheetMenu(title, actions, color) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'sheet';
+  if (color) dlg.style.setProperty('--c', color);
+  dlg.innerHTML = `
+    <form method="dialog">
+      <div class="grab"></div>
+      <h2>${esc(title)}</h2>
+      <div class="menu-list">
+        ${actions.map((a, i) => `<button type="button" class="menu-item ${a.danger ? 'danger' : ''}" data-i="${i}"><span>${a.icon || ''}</span>${esc(a.label)}</button>`).join('')}
+      </div>
+      <div class="actions"><span class="spacer"></span><button type="submit" class="btn ghost">Chiudi</button></div>
+    </form>`;
+  document.body.append(dlg);
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg) return dlg.close();
+    const b = e.target.closest('[data-i]');
+    if (!b) return;
+    dlg.close();
+    actions[b.dataset.i].run();
+  });
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.showModal();
+}
+
 /** Campo data con scorciatoie. */
 export function dateField(name, label, value = '', { quick = true } = {}) {
   const next = new Date();

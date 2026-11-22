@@ -3,7 +3,7 @@ import * as drive from '../drive.js';
 import * as scad from '../scadenze.js';
 import { analyze } from '../ocr.js';
 import {
-  esc, pageHead, formDialog, toast, dateField, avatar, relDate, dueClass, daysUntil,
+  esc, pageHead, formDialog, toast, dateField, avatar, relDate, dueClass, daysUntil, sheetMenu,
 } from '../util.js';
 import { icon } from '../icons.js';
 
@@ -50,30 +50,7 @@ function staleBanner() {
 }
 
 /** Piccolo menu a comparsa dal basso con un elenco di azioni. */
-function menu(title, actions) {
-  const dlg = document.createElement('dialog');
-  dlg.className = 'sheet';
-  dlg.style.setProperty('--c', COLOR);
-  dlg.innerHTML = `
-    <form method="dialog">
-      <div class="grab"></div>
-      <h2>${esc(title)}</h2>
-      <div class="menu-list">
-        ${actions.map((a, i) => `<button type="button" class="menu-item ${a.danger ? 'danger' : ''}" data-i="${i}"><span>${a.icon || ''}</span>${esc(a.label)}</button>`).join('')}
-      </div>
-      <div class="actions"><span class="spacer"></span><button type="submit" class="btn ghost">Chiudi</button></div>
-    </form>`;
-  document.body.append(dlg);
-  dlg.addEventListener('click', (e) => {
-    if (e.target === dlg) return dlg.close();
-    const b = e.target.closest('[data-i]');
-    if (!b) return;
-    dlg.close();
-    actions[b.dataset.i].run();
-  });
-  dlg.addEventListener('close', () => dlg.remove());
-  dlg.showModal();
-}
+const menu = (title, actions) => sheetMenu(title, actions, COLOR);
 
 function confirm(title, text, okLabel, run) {
   formDialog({
