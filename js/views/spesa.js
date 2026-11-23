@@ -340,11 +340,11 @@ export default function spesa(root) {
       actions: `<button class="icon-btn" type="button" data-cats aria-label="Gestisci categorie">${icon('tag')}</button>`,
     })}
     <form class="quick-add" data-add>
-      <input name="name" list="spesa-sugg" placeholder="Cosa serve? es. latte, pane…" autocomplete="off" enterkeyhint="done" aria-label="Aggiungi prodotto">
+      <input name="name" placeholder="Cosa serve? es. latte, pane…" autocomplete="off" enterkeyhint="done" aria-label="Aggiungi prodotto">
       <button class="icon-btn secondary" type="button" data-detailed aria-label="Aggiungi con dettagli (categoria, urgente…)">${icon('sliders')}</button>
       <button class="icon-btn" type="submit" aria-label="Aggiungi veloce">${icon('plus')}</button>
+      <div class="sugg-chips" data-sugg hidden></div>
     </form>
-    <datalist id="spesa-sugg"></datalist>
     <div class="cat-groups" data-list></div>`;
 
   const form = root.querySelector('[data-add]');
@@ -357,6 +357,42 @@ export default function spesa(root) {
     input.value = '';
     itemForm(null, prefill);
   };
+
+  // Suggerimenti mentre si scrive: prodotti usati in passato (non già in lista),
+  // in una riga di pulsanti sotto il campo. Fatti dall'app e non dal browser,
+  // così sono uguali su tutti i telefoni (il menu del browser su alcuni
+  // Android copriva la tastiera).
+  const suggEl = form.querySelector('[data-sugg]');
+  const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function showSugg() {
+    const q = norm(input.value.trim());
+    if (!q) {
+      suggEl.hidden = true;
+      return;
+    }
+    const inList = new Set(store.getAll('spesa').filter((i) => !i.done).map((i) => memoKey(i.name)));
+    const found = store.getAll('spesaMemo')
+      .filter((m) => !inList.has(m.id) && norm(m.name) !== q)
+      .map((m) => {
+        const n = norm(m.name);
+        const score = n.startsWith(q) ? 0 : n.split(/\s+/).some((w) => w.startsWith(q)) ? 1 : 9;
+        return { m, score };
+      })
+      .filter((x) => x.score < 9)
+      .sort((a, b) => a.score - b.score || a.m.name.localeCompare(b.m.name))
+      .slice(0, 8);
+    suggEl.hidden = !found.length;
+    suggEl.innerHTML = found.map(({ m }) => `<button type="button" class="chip" data-pick="${esc(m.name)}">${esc(m.name)}</button>`).join('');
+  }
+  input.addEventListener('input', showSugg);
+  // Il tocco su un suggerimento non deve chiudere la tastiera.
+  suggEl.addEventListener('pointerdown', (e) => e.preventDefault());
+  suggEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pick]');
+    if (!b) return;
+    input.value = b.dataset.pick;
+    form.requestSubmit();
+  });
 
   // Aggiunta veloce: categoria automatica, con possibilità di correggerla subito.
   form.addEventListener('submit', (e) => {
@@ -371,6 +407,7 @@ export default function spesa(root) {
       toast(`${item.name} → ${catLabel(c)}`, { label: 'Modifica', run: () => itemForm(store.get('spesa', id)) });
     }
     input.value = '';
+    suggEl.hidden = true;
     input.focus();
   });
 
@@ -396,11 +433,6 @@ export default function spesa(root) {
     const done = all.filter((i) => i.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     root.querySelector('[data-count]').textContent = todo.length ? todo.length : '';
 
-    // Suggerimenti: prodotti usati in passato che non sono già in lista.
-    const inList = new Set(todo.map((i) => memoKey(i.name)));
-    root.querySelector('#spesa-sugg').innerHTML = store.getAll('spesaMemo')
-      .filter((m) => !inList.has(m.id))
-      .map((m) => `<option value="${esc(m.name)}">`).join('');
 
     if (!all.length) {
       listEl.innerHTML = `

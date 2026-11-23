@@ -282,6 +282,7 @@ a { color: inherit; text-decoration: none; }
 
 .quick-add {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
   position: sticky;
@@ -1053,3 +1054,9 @@ dialog.news h2:focus { outline: none; }
 }
 .chore.late .done-btn { background: var(--c); color: #fff; }
 .done-btn:active { transform: scale(.95); }
+
+/* Suggerimenti della spesa mentre si scrive (riga scorrevole sotto il campo) */
+.sugg-chips { flex-basis: 100%; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 0; }
+.sugg-chips::-webkit-scrollbar { display: none; }
+.sugg-chips .chip { flex: none; }
+.sugg-chips[hidden] { display: none; }

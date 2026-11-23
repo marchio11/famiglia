@@ -177,6 +177,11 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    apre direttamente la fotocamera con `capture="environment"`, "Galleria" le
    foto del telefono). Nelle righe non compare chi ha aggiunto il prodotto
    (solo quantità e "Urgente").
+   Suggerimenti mentre si scrive: riga di pulsanti sotto il campo (prodotti
+   di `spesaMemo` non già in lista, con una parola che inizia come il testo,
+   max 8; un tocco aggiunge il prodotto senza chiudere la tastiera). Niente
+   `<datalist>`: su alcuni Android (Samsung) apriva un menu che copriva la
+   tastiera.
 2. **Da fare** (to-do; nell'app tutto in italiano: "Da fare", filtri In corso/Miei/Completati) — assegnatari (una, due o tutte e tre le persone; nessuno =
    tutti; campo `assignees` array, compatibile col vecchio `assignee`),
    data di inizio facoltativa (`start`: prima di quel giorno l'attività sta
