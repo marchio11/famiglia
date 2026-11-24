@@ -1030,8 +1030,10 @@ dialog.news h2:focus { outline: none; }
 /* ---------- Faccende ---------- */
 .every-pick { display: flex; align-items: center; gap: 10px; }
 .every-pick > span { font-weight: 600; }
-.every-pick input { width: 5.5rem; flex: none; }
-.every-pick select { flex: 1; }
+/* Più specifiche della regola generale ".field input" (width: 100%), che
+   altrimenti spingeva il menu fuori dallo schermo. */
+.field .every-pick input:not([type="checkbox"]):not([type="radio"]) { width: 5.5rem; flex: none; }
+.field .every-pick select { flex: 1; width: auto; min-width: 0; }
 .suggest-list { margin-top: 10px; }
 .suggest-list small { color: var(--muted); font-weight: 400; }
 .suggest-list .switch input { accent-color: var(--c); }
