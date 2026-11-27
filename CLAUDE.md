@@ -193,8 +193,12 @@ Alternativa a FamilyWall: niente pubblicità, semplice, solo le sezioni utili.
    data più recente tra `since` e lo storico; scadenza = ultima + `every`;
    stati: in ritardo (scaduta → "Urgente", in home), a breve (ultimo 20% del
    tempo, 1-7 giorni), in ordine; mai fatta = "Da fare" subito. "✓ Fatto"
-   registra oggi + utente (con Annulla); dal menu: fatta un altro giorno o da
-   un altro, storico (si può togliere una registrazione), modifica, elimina.
+   apre "chi l'ha fatta oggi?" (le 3 persone, chi usa l'app per primo, + "un
+   altro giorno…"), poi registra con Annulla; dal menu: fatta oggi/un altro
+   giorno, storico, modifica, elimina. Ogni registrazione (identificata da
+   `at`) si può modificare (chi e quando) o annullare, sia dallo storico
+   della faccenda sia dalla scheda "Storico", che ha i filtri per persona
+   (Tutti/Andrea/Laura/Claudia, con conteggi).
    Eliminare = `deleted: true`: sparisce dall'elenco ma lo storico resta
    nella scheda "Storico" (raggruppato per mese). Sono di tutti (nessun
    responsabile, niente turni, niente classifica, niente Calendar: scelte

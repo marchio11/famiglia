@@ -96,19 +96,31 @@ function markDone(f, day = ymd(new Date()), by = store.getUser()) {
   });
 }
 
-function doneOtherDay(f) {
+/** Scelta rapida dopo "✓ Fatto": chi l'ha fatta (oggi), o un altro giorno. */
+function whoPicker(f) {
+  const me = store.getUser();
+  const order = [...store.MEMBERS].sort((a, b) => (a === me ? -1 : b === me ? 1 : 0));
+  sheetMenu(`${f.emoji} ${f.name} · chi l'ha fatta oggi?`, [
+    ...order.map((m) => ({ icon: avatar(m, 'xs') || '👤', label: m === me ? `${m} (io)` : m, run: () => markDone(f, ymd(new Date()), m) })),
+    { icon: '📅', label: 'Fatta un altro giorno…', run: () => entryForm(f) },
+  ], COLOR);
+}
+
+/** Registrazione nuova (un altro giorno / un'altra persona) o modifica di una esistente (h). */
+function entryForm(f, h = null) {
   const me = store.getUser();
   const today = ymd(new Date());
+  const by = h ? h.by : me;
   formDialog({
-    title: `${f.emoji} ${f.name}`,
+    title: h ? `Modifica · ${f.emoji} ${f.name}` : `${f.emoji} ${f.name}`,
     color: COLOR,
     autofocus: false,
-    submitLabel: 'Registra',
+    submitLabel: h ? 'Salva' : 'Registra',
     body: `
-      <label class="field"><span>Quando è stata fatta?</span><input type="date" name="day" value="${today}" max="${today}" required></label>
+      <label class="field"><span>Quando è stata fatta?</span><input type="date" name="day" value="${h ? h.day : today}" max="${today}" required></label>
       <fieldset class="field"><legend>Chi l'ha fatta?</legend>
         <div class="who-pick">
-          ${store.MEMBERS.map((m) => `<label><input type="radio" name="by" value="${m}" ${m === me ? 'checked' : ''}><span>${avatar(m, 'xs')}${m}</span></label>`).join('')}
+          ${store.MEMBERS.map((m) => `<label><input type="radio" name="by" value="${m}" ${m === by ? 'checked' : ''}><span>${avatar(m, 'xs')}${m}</span></label>`).join('')}
         </div>
       </fieldset>`,
     onSubmit: (v) => {
@@ -116,9 +128,32 @@ function doneOtherDay(f) {
         toast('Scegli una data di oggi o del passato');
         return false;
       }
-      markDone(f, v.day, v.by || me);
+      if (!h) return markDone(f, v.day, v.by || me);
+      const cur = store.get('faccende', f.id);
+      store.update('faccende', f.id, {
+        history: (cur?.history || []).map((x) => (x.at === h.at ? { ...x, day: v.day, by: v.by || x.by } : x)),
+      });
+      toast('Registrazione modificata ✓');
     },
   });
+}
+
+/** Toglie una registrazione sbagliata (con Annulla). */
+function removeEntry(f, h) {
+  const cur = store.get('faccende', f.id);
+  store.update('faccende', f.id, { history: (cur?.history || []).filter((x) => x.at !== h.at) });
+  toast('Registrazione tolta', {
+    label: 'Annulla',
+    run: () => store.update('faccende', f.id, { history: [...(store.get('faccende', f.id)?.history || []), h] }),
+  });
+}
+
+/** Menu di una registrazione dello storico: modificarla o toglierla. */
+function entryMenu(f, h) {
+  sheetMenu(`${f.emoji} ${f.name} · ${h.by || '?'}, ${shortDay(h.day)}`, [
+    { icon: '✏️', label: 'Modifica (chi e quando)', run: () => entryForm(f, h) },
+    { icon: '↩️', label: 'Annulla questa registrazione', danger: true, run: () => removeEntry(f, h) },
+  ], COLOR);
 }
 
 function openForm(item) {
@@ -170,33 +205,22 @@ function removeChore(f) {
   });
 }
 
-/** Storico di una faccenda: chi l'ha fatta e quando (si può togliere una registrazione sbagliata). */
+/** Storico di una faccenda: chi l'ha fatta e quando (tocco = modifica o annulla). */
 function historyDialog(f) {
   const list = [...(f.history || [])].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at);
   sheetMenu(`${f.emoji} ${f.name} · storico`, list.length
     ? list.slice(0, 30).map((h) => ({
       icon: avatar(h.by, 'xs') || '✓',
-      label: `${h.by || '?'} · ${shortDay(h.day)} (${ago(h.day)}) — tocca per togliere`,
-      run: () => formDialog({
-        title: 'Togliere questa registrazione?',
-        color: COLOR,
-        autofocus: false,
-        submitLabel: 'Togli',
-        body: `<p>${esc(f.name)}: fatta da <b>${esc(h.by || '?')}</b> il ${esc(shortDay(h.day))}. Utile se è stata segnata per sbaglio.</p>`,
-        onSubmit: () => {
-          const cur = store.get('faccende', f.id);
-          store.update('faccende', f.id, { history: (cur?.history || []).filter((x) => x.at !== h.at) });
-          toast('Registrazione tolta');
-        },
-      }),
+      label: `${h.by || '?'} · ${shortDay(h.day)} (${ago(h.day)})`,
+      run: () => entryMenu(f, h),
     }))
     : [{ icon: '🌱', label: 'Ancora nessuna registrazione', run: () => {} }], COLOR);
 }
 
 function choreMenu(f) {
   sheetMenu(`${f.emoji} ${f.name}`, [
-    { icon: '✅', label: 'Fatta oggi da me', run: () => markDone(f) },
-    { icon: '📅', label: 'Fatta un altro giorno o da un altro…', run: () => doneOtherDay(f) },
+    { icon: '✅', label: 'Fatta oggi…', run: () => whoPicker(f) },
+    { icon: '📅', label: 'Fatta un altro giorno…', run: () => entryForm(f) },
     { icon: '🕘', label: 'Storico', run: () => historyDialog(f) },
     { icon: '✏️', label: 'Modifica (nome e ogni quanto)', run: () => openForm(f) },
     { icon: '🗑️', label: 'Elimina', danger: true, run: () => removeChore(f) },
@@ -234,6 +258,7 @@ function suggestDialog() {
 /* ---------- Schermata ---------- */
 
 let tab = 'list'; // 'list' | 'history'
+let whoFilter = ''; // storico: '' = tutti, oppure il nome della persona
 
 function row(f) {
   const s = status(f);
@@ -261,8 +286,19 @@ function row(f) {
 }
 
 function historyHtml() {
-  const all = store.getAll('faccende').flatMap((f) => (f.history || []).map((h) => ({ ...h, f })));
-  if (!all.length) return '<div class="empty-state"><span class="big">🕘</span><p><strong>Ancora niente nello storico</strong></p><p>Ogni volta che qualcuno segna una faccenda come fatta, comparirà qui.</p></div>';
+  const every = store.getAll('faccende').flatMap((f) => (f.history || []).map((h) => ({ ...h, f })));
+  if (!every.length) return '<div class="empty-state"><span class="big">🕘</span><p><strong>Ancora niente nello storico</strong></p><p>Ogni volta che qualcuno segna una faccenda come fatta, comparirà qui.</p></div>';
+  // Filtro per persona: "Tutti" oppure solo le faccende fatte da una persona.
+  const filters = `
+    <div class="chips who-filter" role="group" aria-label="Chi l'ha fatta">
+      ${[['', 'Tutti'], ...store.MEMBERS.map((m) => [m, m])].map(([k, l]) => {
+        const n = k ? every.filter((h) => h.by === k).length : every.length;
+        return `<button class="chip" type="button" data-who="${esc(k)}" aria-pressed="${whoFilter === k}">${k ? avatar(k, 'xs') : ''}${esc(l)} · ${n}</button>`;
+      }).join('')}
+    </div>
+    <p class="hint">Tocca una voce per modificarla o annullarla.</p>`;
+  const all = whoFilter ? every.filter((h) => h.by === whoFilter) : every;
+  if (!all.length) return `${filters}<div class="empty-state"><span class="big">🕘</span><p><strong>${esc(whoFilter)} non ha ancora registrato faccende</strong></p></div>`;
   all.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at);
   const months = new Map();
   for (const h of all) {
@@ -271,16 +307,17 @@ function historyHtml() {
     if (!months.has(key)) months.set(key, []);
     months.get(key).push(h);
   }
-  return [...months].map(([month, list]) => `
+  return filters + [...months].map(([month, list]) => `
     <section class="group">
       <h3 class="group-head"><span>${esc(month.charAt(0).toUpperCase() + month.slice(1))}</span></h3>
       <div class="card rows">${list.map((h) => `
-        <div class="row">
+        <div class="row entry" data-entry="${esc(h.f.id)}" data-at="${h.at}">
           <span class="lead">${h.f.emoji}</span>
           <div class="row-main">
             <div class="row-title">${esc(h.f.name)}${h.f.deleted ? ' <small class="hint">(eliminata)</small>' : ''}</div>
             <div class="row-sub"><span class="who-mini">${avatar(h.by, 'xs')}${esc(h.by || '?')}</span><span>${esc(shortDay(h.day))}</span></div>
           </div>
+          <span class="entry-more" aria-hidden="true">⋯</span>
         </div>`).join('')}</div>
     </section>`).join('');
 }
@@ -305,12 +342,25 @@ export default function faccende(root) {
 
   listEl.addEventListener('click', (e) => {
     if (e.target.closest('[data-suggest]')) return suggestDialog();
+    const whoBtn = e.target.closest('[data-who]');
+    if (whoBtn) {
+      whoFilter = whoBtn.dataset.who;
+      draw();
+      return;
+    }
+    const entryEl = e.target.closest('[data-entry]');
+    if (entryEl) {
+      const f = store.get('faccende', entryEl.dataset.entry);
+      const h = f?.history?.find((x) => String(x.at) === entryEl.dataset.at);
+      if (f && h) entryMenu(f, h);
+      return;
+    }
     const act = e.target.closest('[data-act]');
     const rowEl = e.target.closest('[data-id]');
     if (!act || !rowEl) return;
     const f = store.get('faccende', rowEl.dataset.id);
     if (!f) return;
-    if (act.dataset.act === 'done') markDone(f);
+    if (act.dataset.act === 'done') whoPicker(f);
     if (act.dataset.act === 'menu') choreMenu(f);
   });
 
@@ -332,7 +382,7 @@ export default function faccende(root) {
         <div class="empty-state">
           <span class="big">🧹</span>
           <p><strong>Nessuna faccenda per ora</strong></p>
-          <p>Ogni faccenda ha un tempo (es. "ogni 2 settimane"): quando qualcuno la fa, tocca <b>✓ Fatto</b> e il conto riparte. Se il tempo scade diventa urgente.</p>
+          <p>Ogni faccenda ha un tempo (es. "ogni 2 settimane"): quando qualcuno la fa, tocca <b>✓ Fatto</b>, scegli chi l'ha fatta e il conto riparte. Se il tempo scade diventa urgente.</p>
           <button class="btn primary" type="button" data-suggest>Scegli tra quelle suggerite</button>
         </div>`;
       return;

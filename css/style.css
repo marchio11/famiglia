@@ -1062,3 +1062,10 @@ dialog.news h2:focus { outline: none; }
 .sugg-chips::-webkit-scrollbar { display: none; }
 .sugg-chips .chip { flex: none; }
 .sugg-chips[hidden] { display: none; }
+
+/* Storico delle faccende: voci toccabili e filtro per persona */
+.row.entry { cursor: pointer; }
+.entry-more { color: var(--muted); font-size: 1.3rem; padding: 0 6px; }
+.who-filter { flex-wrap: wrap; overflow: visible; }
+.who-filter .chip { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.menu-item span .avatar { margin: 0 auto; }

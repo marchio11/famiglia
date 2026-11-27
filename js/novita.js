@@ -5,10 +5,31 @@
 
 import { esc } from './util.js';
 
-export const RELEASE = 40;
+export const RELEASE = 44;
 const SEEN_KEY = 'cm:seenRelease';
 
 const NOTES = {
+  44: {
+    title: 'Versione 44',
+    intro: 'Le faccende diventano ancora più comode! 🧹',
+    items: [
+      {
+        emoji: '🙋',
+        title: 'Chi l\'ha fatta?',
+        text: 'Toccando ✓ Fatto ora scegli chi ha svolto la faccenda (te, o un altro della famiglia) con un tocco solo. C\'è anche "Fatta un altro giorno…" se te ne ricordi dopo.',
+      },
+      {
+        emoji: '✏️',
+        title: 'Storico modificabile',
+        text: 'Nello Storico tocca una voce per correggerla (chi e quando) o annullarla se è stata inserita per sbaglio.',
+      },
+      {
+        emoji: '🔎',
+        title: 'Filtra per persona',
+        text: 'In cima allo Storico scegli Tutti, Andrea, Laura o Claudia per vedere solo le faccende svolte da quella persona.',
+      },
+    ],
+  },
   40: {
     title: 'Versione 40',
     intro: 'Arriva una sezione nuova, pensata tutti insieme! 🧹',
